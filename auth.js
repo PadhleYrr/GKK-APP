@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// auth.js - FINAL WORKING VERSION FOR CAPACITOR ANDROID + GOOGLE LOGIN
-// This is tested and guaranteed to work. No variations. No options.
+// auth.js - NATIVE GOOGLE SIGN-IN FOR CAPACITOR ANDROID
+// Uses @codetrix-studio/capacitor-google-auth for in-app Google login
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── FIREBASE CONFIG ─────────────────────────────────────────────────────────
-// This is YOUR config from google-services.json - EXACT MATCH
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAJoOz73MrNt2pEVPf5Gh9BQ5r7yWz2l-Y",
   authDomain: "mpgk-9496d.firebaseapp.com",
@@ -22,31 +21,20 @@ const PREMIUM_MONTHS = 6;
 // ── GLOBAL STATE ────────────────────────────────────────────────────────────
 let currentUser = null;
 let firebaseAuth = null;
-let googleProvider = null;
 let firebaseInitialized = false;
 
-// ── INITIALIZE FIREBASE (MODULAR SDK - WORKING VERSION) ──────────────────
+// ── INITIALIZE FIREBASE ──────────────────────────────────────────────────────
 async function initFirebase() {
   try {
-    // Import Firebase functions
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js");
-    const { getAuth, GoogleAuthProvider, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
-    
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
+
     console.log('🔧 Initializing Firebase...');
-    
-    // Initialize Firebase app
     const app = initializeApp(FIREBASE_CONFIG);
-    console.log('✅ Firebase app initialized');
-    
-    // Get auth instance
     firebaseAuth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
     firebaseInitialized = true;
-    
     console.log('✅ Firebase Auth initialized');
-    console.log('✅ Google Auth Provider ready');
-    
-    // Listen for auth state changes
+
     onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         console.log('👤 User signed in:', user.email);
@@ -54,25 +42,82 @@ async function initFirebase() {
         saveUserLocally(user);
         onUserLoggedIn(user);
       } else {
-        console.log('👤 User signed out');
+        console.log('👤 No user session');
         currentUser = null;
-        showLoginScreen();
       }
     });
-    
+
   } catch (error) {
-    console.error('❌ Firebase initialization error:', error.message);
+    console.error('❌ Firebase init error:', error.message);
     showErrorModal('Firebase Error', error.message);
-    // Retry after 2 seconds
     setTimeout(initFirebase, 2000);
   }
 }
 
-// ── ERROR MODAL ─────────────────────────────────────────────────────────
+// ── GOOGLE SIGN IN (NATIVE - NO CHROME REDIRECT) ────────────────────────────
+async function signInWithGoogle() {
+  if (!firebaseInitialized || !firebaseAuth) {
+    showLoginError('Firebase not ready. Please wait...');
+    return;
+  }
+
+  const btn = document.getElementById('google-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Signing in...'; }
+
+  try {
+    // ── Step 1: Get Google ID token using Capacitor plugin (native Android dialog)
+    const { GoogleAuth } = await import("https://cdn.jsdelivr.net/npm/@codetrix-studio/capacitor-google-auth@3.3.3/dist/plugin.esm.js");
+
+    await GoogleAuth.initialize({
+      clientId: '77589429691-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+    });
+
+    const googleUser = await GoogleAuth.signIn();
+    console.log('✅ Google native sign-in success');
+
+    // ── Step 2: Sign into Firebase with the Google credential
+    const { GoogleAuthProvider, signInWithCredential } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
+
+    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+    const result = await signInWithCredential(firebaseAuth, credential);
+
+    console.log('✅ Firebase sign-in success:', result.user.email);
+
+    // Start trial for new users
+    startTrialIfNew(result.user.uid);
+
+  } catch (error) {
+    console.error('❌ Sign-in error:', error.code, error.message);
+
+    let msg = 'Sign in failed. Please try again.';
+    if (error.code === 'auth/configuration-not-found') {
+      msg = 'Firebase not configured. Check SHA-1 fingerprint in Firebase Console.';
+    } else if (error.message && error.message.includes('cancelled')) {
+      msg = 'Sign-in cancelled.';
+    } else if (error.message) {
+      msg = error.message;
+    }
+
+    showLoginError(msg);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Try Again`;
+    }
+  }
+}
+
+function showLoginError(msg) {
+  const errEl = document.getElementById('login-error');
+  if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+}
+
+// ── ERROR MODAL ──────────────────────────────────────────────────────────────
 function showErrorModal(title, message) {
   const existing = document.getElementById('error-modal');
   if (existing) return;
-  
+
   const modal = document.createElement('div');
   modal.id = 'error-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -81,7 +126,7 @@ function showErrorModal(title, message) {
       <div style="font-size:40px;margin-bottom:12px">⚠️</div>
       <div style="font-weight:bold;font-size:16px;color:#DC2626;margin-bottom:8px">${title}</div>
       <div style="font-size:13px;color:#64748B;margin-bottom:16px;line-height:1.6">${message}</div>
-      <button onclick="document.getElementById('error-modal').remove();location.reload()" 
+      <button onclick="document.getElementById('error-modal').remove();location.reload()"
         style="width:100%;padding:12px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">
         Reload App
       </button>
@@ -90,13 +135,13 @@ function showErrorModal(title, message) {
   document.body.appendChild(modal);
 }
 
-// ── LOGIN SCREEN ────────────────────────────────────────────────────────
+// ── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function showLoginScreen() {
   if (localStorage.getItem('mppsc_user')) return;
-  
+
   const existing = document.getElementById('login-screen');
   if (existing) return;
-  
+
   const el = document.createElement('div');
   el.id = 'login-screen';
   el.style.cssText = 'position:fixed;inset:0;background:#1A237E;z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -121,9 +166,9 @@ function showLoginScreen() {
       <div style="font-size:12px;color:#64748B;margin-bottom:16px">After 7 days — only ₹100 for 6 months</div>
 
       <button onclick="signInWithGoogle()" id="google-btn"
-        style="width:100%;padding:14px;background:#fff;color:#374151;border:2px solid #E5E7EB;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;transition:all .2s;${!firebaseInitialized ? 'opacity:0.5;cursor:not-allowed' : ''}">
+        style="width:100%;padding:14px;background:#fff;color:#374151;border:2px solid #E5E7EB;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        ${firebaseInitialized ? 'Continue with Google' : 'Initializing...'}
+        Continue with Google
       </button>
 
       <div id="login-error" style="color:#DC2626;font-size:12px;margin-top:10px;display:none"></div>
@@ -133,57 +178,7 @@ function showLoginScreen() {
   document.body.appendChild(el);
 }
 
-// ── GOOGLE SIGN IN (100% WORKING FOR CAPACITOR) ──────────────────────────
-async function signInWithGoogle() {
-  if (!firebaseInitialized || !firebaseAuth) {
-    console.error('❌ Firebase not initialized');
-    const errEl = document.getElementById('login-error');
-    if (errEl) {
-      errEl.textContent = 'Firebase not ready. Retrying...';
-      errEl.style.display = 'block';
-    }
-    return;
-  }
-
-  const btn = document.getElementById('google-btn');
-  if (btn) { 
-    btn.disabled = true;
-    btn.textContent = 'Signing in...'; 
-  }
-
-  try {
-    // Import sign-in functions
-    const { signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
-    
-    console.log('🔐 Starting Google sign-in...');
-    
-    // Use redirect (works better in WebView than popup)
-    // User will be redirected to Google login, then back to app
-    await signInWithRedirect(firebaseAuth, googleProvider);
-    console.log('✅ Redirect initiated');
-    
-  } catch (error) {
-    console.error('❌ Sign-in error:', error.code, error.message);
-    
-    const errEl = document.getElementById('login-error');
-    if (errEl) {
-      errEl.textContent = 'Sign in failed: ' + error.message;
-      errEl.style.display = 'block';
-    }
-    
-    if (btn) { 
-      btn.disabled = false;
-      btn.textContent = '❌ Try Again'; 
-    }
-    
-    // Show specific error help
-    if (error.code === 'auth/operation-not-supported-in-this-environment') {
-      showErrorModal('Sign-In Error', 'Google Sign-In not available. Make sure you\'re using the APK on a real device with Google Play Services installed.');
-    }
-  }
-}
-
-// ── USER HELPERS ────────────────────────────────────────────────────────
+// ── USER HELPERS ─────────────────────────────────────────────────────────────
 function saveUserLocally(user) {
   localStorage.setItem('mppsc_user', JSON.stringify({
     uid: user.uid,
@@ -191,15 +186,11 @@ function saveUserLocally(user) {
     email: user.email,
     photo: user.photoURL
   }));
-  console.log('💾 User saved to localStorage');
 }
 
 function getLocalUser() {
-  try { 
-    return JSON.parse(localStorage.getItem('mppsc_user')); 
-  } catch { 
-    return null; 
-  }
+  try { return JSON.parse(localStorage.getItem('mppsc_user')); }
+  catch { return null; }
 }
 
 function removeLoginScreen() {
@@ -207,13 +198,12 @@ function removeLoginScreen() {
   if (el) el.remove();
 }
 
-// ── TRIAL SYSTEM ────────────────────────────────────────────────────────
+// ── TRIAL SYSTEM ─────────────────────────────────────────────────────────────
 function startTrialIfNew(uid) {
   const key = 'trial_start_' + uid;
   if (!localStorage.getItem(key)) {
     localStorage.setItem(key, Date.now().toString());
     showToastSafe('🎁 7-day free trial started!', '#15803D');
-    console.log('🎁 Trial started');
   }
 }
 
@@ -229,32 +219,27 @@ function isTrialActive(uid) {
   return getTrialDaysLeft(uid) > 0;
 }
 
-// ── PREMIUM SYSTEM ──────────────────────────────────────────────────────
+// ── PREMIUM SYSTEM ────────────────────────────────────────────────────────────
 function isPremium() {
   const user = getLocalUser();
   if (!user) return false;
-  const key = 'premium_expiry_' + user.uid;
-  const expiry = parseInt(localStorage.getItem(key) || '0');
+  const expiry = parseInt(localStorage.getItem('premium_expiry_' + user.uid) || '0');
   return expiry > Date.now();
 }
 
 function setPremium(uid, months) {
-  const key = 'premium_expiry_' + uid;
   const expiry = Date.now() + (months * 30 * 24 * 60 * 60 * 1000);
-  localStorage.setItem(key, expiry.toString());
+  localStorage.setItem('premium_expiry_' + uid, expiry.toString());
 }
 
 function getPremiumDaysLeft() {
   const user = getLocalUser();
   if (!user) return 0;
-  const key = 'premium_expiry_' + user.uid;
-  const expiry = parseInt(localStorage.getItem(key) || '0');
-  if (!expiry) return 0;
-  const daysLeft = (expiry - Date.now()) / (1000 * 60 * 60 * 24);
-  return Math.max(0, Math.ceil(daysLeft));
+  const expiry = parseInt(localStorage.getItem('premium_expiry_' + user.uid) || '0');
+  return Math.max(0, Math.ceil((expiry - Date.now()) / (1000 * 60 * 60 * 24)));
 }
 
-// ── PAYWALL ────────────────────────────────────────────────────────────
+// ── PAYWALL ───────────────────────────────────────────────────────────────────
 function showPaywall(msg) {
   const existing = document.getElementById('paywall-modal');
   if (existing) return;
@@ -270,12 +255,10 @@ function showPaywall(msg) {
       <div style="font-size:48px;margin-bottom:12px">🔒</div>
       <div style="font-size:18px;font-weight:800;margin-bottom:8px;font-family:'Syne',sans-serif">Trial Expired</div>
       <div style="font-size:14px;opacity:0.9;margin-bottom:24px">Unlock ${msg} with premium</div>
-
       <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:16px;margin-bottom:24px">
         <div style="font-size:28px;font-weight:800;margin-bottom:4px">₹100</div>
-        <div style="font-size:13px">6 months access<br>Cancel anytime</div>
+        <div style="font-size:13px">6 months access</div>
       </div>
-
       <button onclick="openPayment()" id="pay-btn"
         style="width:100%;padding:14px;background:#fff;color:#1A237E;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif">
         🔓 Unlock for ₹100
@@ -289,18 +272,11 @@ function showPaywall(msg) {
   document.body.appendChild(el);
 }
 
-// ── PAYMENT ────────────────────────────────────────────────────────────
+// ── PAYMENT ───────────────────────────────────────────────────────────────────
 async function openPayment() {
   const user = getLocalUser();
-  if (!user) {
-    showToastSafe('Please log in first', '#DC2626');
-    return;
-  }
-
-  if (typeof Razorpay === 'undefined') {
-    showToastSafe('Payment gateway not loaded. Try again.', '#DC2626');
-    return;
-  }
+  if (!user) { showToastSafe('Please log in first', '#DC2626'); return; }
+  if (typeof Razorpay === 'undefined') { showToastSafe('Payment gateway not loaded. Try again.', '#DC2626'); return; }
 
   const btn = document.getElementById('pay-btn');
   if (btn) { btn.textContent = 'Opening payment...'; btn.disabled = true; }
@@ -312,15 +288,8 @@ async function openPayment() {
     name: 'MP GK Portal',
     description: '6 Months Premium Access',
     image: 'icon.png',
-    prefill: {
-      name: user.name || '',
-      email: user.email || '',
-      contact: ''
-    },
-    notes: {
-      uid: user.uid,
-      months: PREMIUM_MONTHS
-    },
+    prefill: { name: user.name || '', email: user.email || '', contact: '' },
+    notes: { uid: user.uid, months: PREMIUM_MONTHS },
     theme: { color: '#1A237E' },
     handler: function(response) {
       setPremium(user.uid, PREMIUM_MONTHS);
@@ -338,14 +307,14 @@ async function openPayment() {
   };
 
   const rzp = new Razorpay(options);
-  rzp.on('payment.failed', function(response) {
+  rzp.on('payment.failed', function() {
     showToastSafe('Payment failed. Please try again.', '#DC2626');
     if (btn) { btn.textContent = '🔓 Unlock for ₹100'; btn.disabled = false; }
   });
   rzp.open();
 }
 
-// ── ON USER LOGGED IN ──────────────────────────────────────────────────
+// ── ON USER LOGGED IN ─────────────────────────────────────────────────────────
 function onUserLoggedIn(user) {
   removeLoginScreen();
   updateUserBadge();
@@ -360,7 +329,7 @@ function onUserLoggedIn(user) {
   }
 }
 
-// ── USER BADGE in topbar ───────────────────────────────────────────────
+// ── USER BADGE ────────────────────────────────────────────────────────────────
 function updateUserBadge() {
   const user = getLocalUser();
   if (!user) return;
@@ -391,7 +360,7 @@ function updateUserBadge() {
   `;
 }
 
-// ── ACCOUNT MODAL ──────────────────────────────────────────────────────
+// ── ACCOUNT MODAL ─────────────────────────────────────────────────────────────
 function showAccountModal() {
   const existing = document.getElementById('account-modal');
   if (existing) { existing.remove(); return; }
@@ -437,25 +406,27 @@ function showAccountModal() {
   document.body.appendChild(el);
 }
 
-// ── SIGN OUT ───────────────────────────────────────────────────────────
+// ── SIGN OUT ──────────────────────────────────────────────────────────────────
 async function signOut() {
   try {
     if (firebaseAuth && firebaseAuth.signOut) {
       await firebaseAuth.signOut();
-      console.log('✅ Signed out');
     }
+    // Also sign out from Google native
+    try {
+      const { GoogleAuth } = await import("https://cdn.jsdelivr.net/npm/@codetrix-studio/capacitor-google-auth@3.3.3/dist/plugin.esm.js");
+      await GoogleAuth.signOut();
+    } catch(e) { /* ignore if plugin not available */ }
   } catch(e) {
     console.error('Sign out error:', e.message);
   }
   localStorage.removeItem('mppsc_user');
-  const modal = document.getElementById('account-modal');
-  if (modal) modal.remove();
-  const badge = document.getElementById('user-badge');
-  if (badge) badge.remove();
+  document.getElementById('account-modal')?.remove();
+  document.getElementById('user-badge')?.remove();
   showLoginScreen();
 }
 
-// ── TOAST HELPER ───────────────────────────────────────────────────────
+// ── TOAST HELPER ──────────────────────────────────────────────────────────────
 function showToastSafe(msg, color) {
   if (typeof showToast === 'function') { showToast(msg, color); return; }
   const t = document.createElement('div');
@@ -465,28 +436,18 @@ function showToastSafe(msg, color) {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ── INITIALIZATION (RUNS ON PAGE LOAD) ──────────────────────────────────
+// ── INIT ON PAGE LOAD ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 App initializing...');
-  
-  // Initialize Firebase (modular SDK)
   await initFirebase();
-  
+
   setTimeout(() => {
-    // Check if user already logged in
     const user = getLocalUser();
     if (!user) {
-      // Not logged in - show login screen
-      console.log('📱 Showing login screen');
       showLoginScreen();
     } else {
-      // Already logged in - restore session
-      console.log('👤 Restoring user session');
       updateUserBadge();
-      
-      // Check if trial/premium expired
       if (!isPremium() && !isTrialActive(user.uid)) {
-        console.log('⏰ Trial expired - showing paywall');
         setTimeout(() => showPaywall('full app access'), 1500);
       }
     }
