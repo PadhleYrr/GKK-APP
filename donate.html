@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Support Us — MP GK Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1A237E;--saff:#FF6B00;--bg:#F4F6FB;--card:#fff;--border:#E2E8F0;--text:#1E293B;--muted:#64748B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px}
+.container{max-width:480px;margin:0 auto}
+.back-btn{display:flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:24px;background:none;border:none;padding:0}
+.hero{background:var(--navy);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;color:#fff}
+.hero-icon{font-size:48px;margin-bottom:12px}
+.hero-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px}
+.hero-sub{font-size:13px;opacity:.75;line-height:1.6}
+.card{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:var(--navy)}
+.amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.amt-btn{padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;color:var(--text)}
+.amt-btn.active,.amt-btn:hover{border-color:var(--navy);background:#EEF2FF;color:var(--navy)}
+.custom-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px}
+.custom-input:focus{border-color:var(--navy)}
+.upi-section{text-align:center}
+.upi-id-box{background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;margin:12px 0;cursor:pointer;transition:all .2s}
+.upi-id-box:hover{background:#E0E8FF}
+.upi-id{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px}
+.upi-label{font-size:11px;color:var(--muted);margin-top:4px}
+.copy-hint{font-size:12px;color:var(--saff);margin-top:6px;font-weight:600}
+.pay-btns{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.pay-btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;transition:all .2s}
+.gpay-btn{background:#1A73E8;color:#fff}
+.phonepe-btn{background:#5F259F;color:#fff}
+.paytm-btn{background:#00BAF2;color:#fff}
+.qr-section{text-align:center;padding:20px 0}
+.qr-placeholder{width:180px;height:180px;background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:12px;gap:8px}
+.qr-note{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6}
+.impact{display:flex;flex-direction:column;gap:10px}
+.impact-item{display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px}
+.impact-icon{font-size:20px;flex-shrink:0}
+.impact-text{font-size:13px;color:var(--text);line-height:1.5}
+.impact-text b{color:var(--navy)}
+.thanks-note{text-align:center;font-size:12px;color:var(--muted);line-height:1.7;padding:16px 0}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <button class="back-btn" onclick="history.back()">← Back to App</button>
+
+  <div class="hero">
+    <div class="hero-icon">❤️</div>
+    <div class="hero-title">Support MP GK Portal</div>
+    <div class="hero-sub">This app is built with love for MPPSC aspirants across Madhya Pradesh. Your support keeps it free and growing!</div>
+  </div>
+
+  <!-- Amount selection -->
+  <div class="card">
+    <div class="card-title">Choose Amount</div>
+    <div class="amounts">
+      <button class="amt-btn" onclick="setAmount(11, this)">₹11</button>
+      <button class="amt-btn active" onclick="setAmount(21, this)">₹21</button>
+      <button class="amt-btn" onclick="setAmount(51, this)">₹51</button>
+      <button class="amt-btn" onclick="setAmount(101, this)">₹101</button>
+    </div>
+    <input class="custom-input" type="number" id="amount-input" value="21" placeholder="Enter custom amount" oninput="clearAmtBtns()">
+    <div style="font-size:12px;color:var(--muted);text-align:center">Every rupee helps us add more content 🙏</div>
+  </div>
+
+  <!-- UPI Pay -->
+  <div class="card">
+    <div class="card-title">Pay via UPI</div>
+    <div class="upi-section">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Send to UPI ID</div>
+      <div class="upi-id-box" onclick="copyUPI()">
+        <div class="upi-id" id="upi-display">padhleyrr@upi</div>
+        <div class="upi-label">MP GK Portal — PadhleYrr</div>
+        <div class="copy-hint">📋 Tap to copy</div>
+      </div>
+
+      <div class="pay-btns">
+        <button class="pay-btn gpay-btn" onclick="openGPay()">
+          <span style="font-size:18px">G</span> Pay with Google Pay
+        </button>
+        <button class="pay-btn phonepe-btn" onclick="openPhonePe()">
+          <span style="font-size:18px">📱</span> Pay with PhonePe
+        </button>
+        <button class="pay-btn paytm-btn" onclick="openPaytm()">
+          <span style="font-size:18px">💙</span> Pay with Paytm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code -->
+  <div class="card">
+    <div class="card-title">Scan QR Code</div>
+    <div class="qr-section">
+      <!-- Replace this div with an actual QR code image -->
+      <!-- Generate your UPI QR at: https://www.upiid.com/generate-qr -->
+      <!-- Then replace with: <img src="upi-qr.png" style="width:180px;border-radius:12px"> -->
+      <div class="qr-placeholder">
+        <span style="font-size:32px">📱</span>
+        <span>Add your UPI QR image here</span>
+        <span style="font-size:10px">Replace with upi-qr.png</span>
+      </div>
+      <div class="qr-note">
+        Open any UPI app → Scan QR → Enter amount → Pay<br>
+        Works with GPay, PhonePe, Paytm, BHIM & all UPI apps
+      </div>
+    </div>
+  </div>
+
+  <!-- Impact -->
+  <div class="card">
+    <div class="card-title">Your donation helps us</div>
+    <div class="impact">
+      <div class="impact-item">
+        <div class="impact-icon">📚</div>
+        <div class="impact-text"><b>Add more questions</b> — We add 50+ new MCQs every month based on latest MPPSC pattern</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-icon">🔔</div>
+        <div class="impact-text"><b>Build new features</b> — Daily current affairs, Hindi UI, offline mode & more</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-icon">🆓</div>
+        <div class="impact-text"><b>Keep it affordable</b> — Your support lets us keep premium at just ₹100 for rural students</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-icon">🏆</div>
+        <div class="impact-text"><b>Server costs</b> — Keep the app running fast and available 24/7 for all aspirants</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="thanks-note">
+    🙏 Thank you for supporting MPPSC aspirants across Madhya Pradesh!<br>
+    Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP
+  </div>
+
+</div>
+
+<script>
+const UPI_ID = 'padhleyrr@upi'; // ← Change to your real UPI ID
+
+function setAmount(val, btn) {
+  document.getElementById('amount-input').value = val;
+  document.querySelectorAll('.amt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function clearAmtBtns() {
+  document.querySelectorAll('.amt-btn').forEach(b => b.classList.remove('active'));
+}
+
+function getAmount() {
+  return parseInt(document.getElementById('amount-input').value) || 21;
+}
+
+function copyUPI() {
+  const el = document.getElementById('upi-display');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(UPI_ID).then(() => {
+      el.textContent = '✅ Copied!';
+      setTimeout(() => { el.textContent = UPI_ID; }, 2000);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = UPI_ID;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    el.textContent = '✅ Copied!';
+    setTimeout(() => { el.textContent = UPI_ID; }, 2000);
+  }
+}
+
+function openGPay() {
+  const amt = getAmount();
+  const upiUrl = `tez://upi/pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR&tn=Donation+to+MPPSC+App`;
+  window.location.href = upiUrl;
+  // Fallback to generic UPI
+  setTimeout(() => {
+    window.location.href = `upi://pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR`;
+  }, 1500);
+}
+
+function openPhonePe() {
+  const amt = getAmount();
+  window.location.href = `phonepe://pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR&tn=Donation+to+MPPSC+App`;
+  setTimeout(() => {
+    window.location.href = `upi://pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR`;
+  }, 1500);
+}
+
+function openPaytm() {
+  const amt = getAmount();
+  window.location.href = `paytmmp://pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR&tn=Donation+to+MPPSC+App`;
+  setTimeout(() => {
+    window.location.href = `upi://pay?pa=${UPI_ID}&pn=MPGKPortal&am=${amt}&cu=INR`;
+  }, 1500);
+}
+</script>
+</body>
+</html>
