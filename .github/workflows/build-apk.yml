@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,11 +42,15 @@ jobs:
           cp index.html www/
           cp style.css www/
           cp app.js www/
-          cp updater.js www/
+          cp auth.js www/ 2>/dev/null || true
+          cp updater.js www/ 2>/dev/null || true
           cp version.json www/
-          cp data_notes.js www/
-          cp data_pyq.js www/
-          cp data_q.js www/
+          cp donate.html www/ 2>/dev/null || true
+          cp privacy.html www/ 2>/dev/null || true
+          cp icon.png www/ 2>/dev/null || true
+          cp data_notes.js www/ 2>/dev/null || true
+          cp data_pyq.js www/ 2>/dev/null || true
+          cp data_q.js www/ 2>/dev/null || true
           cp maps.html www/ 2>/dev/null || true
           cp pyq_2021_paper1.js www/ 2>/dev/null || true
           cp pyq_2021_paper2.js www/ 2>/dev/null || true
@@ -60,21 +69,26 @@ jobs:
 
       - name: Set app icon
         run: |
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          if [ -f "icon.png" ]; then
+            mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxhdpi
+            mkdir -p android/app/src/main/res/mipmap-xhdpi
+            mkdir -p android/app/src/main/res/mipmap-hdpi
+            mkdir -p android/app/src/main/res/mipmap-mdpi
+            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+            echo "Icon set successfully"
+          else
+            echo "No icon.png found, skipping"
+          fi
 
       - name: Sync web files to Android
         run: npx cap sync android
@@ -101,7 +115,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload APK as artifact too
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: MPPSC-v${{ steps.version.outputs.VERSION }}
