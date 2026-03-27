@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin Panel — MP GK Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1A237E;--light-navy:#EEF2FF;--saff:#FF6B00;
+  --bg:#F0F2F8;--card:#fff;--border:#E2E8F0;
+  --text:#1E293B;--muted:#64748B;--green:#15803D;--red:#DC2626
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100%;overflow-x:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  position:fixed;inset:0;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  z-index:9999
+}
+.login-box{
+  background:#fff;border-radius:24px;padding:40px 32px;
+  max-width:380px;width:100%;text-align:center
+}
+.login-logo{
+  width:72px;height:72px;border-radius:16px;margin:0 auto 16px;
+  background:linear-gradient(135deg,#1A237E,#5E35B1);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:26px;font-family:'Syne',sans-serif
+}
+.login-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.login-input{
+  width:100%;padding:13px 16px;border:2px solid var(--border);
+  border-radius:12px;font-size:14px;margin-bottom:12px;
+  font-family:'DM Sans',sans-serif;outline:none;transition:border .2s
+}
+.login-input:focus{border-color:var(--navy)}
+.login-btn{
+  width:100%;padding:14px;background:var(--navy);color:#fff;
+  border:none;border-radius:12px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s
+}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+#login-error{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+
+/* ── MAIN LAYOUT ── */
+#admin-app{display:none;min-height:100vh}
+.topbar{
+  background:var(--navy);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{
+  width:40px;height:40px;border-radius:10px;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:14px;font-family:'Syne',sans-serif
+}
+.topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
+.logout-btn{
+  background:rgba(255,255,255,.15);color:#fff;border:none;
+  padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s
+}
+.logout-btn:hover{background:rgba(255,255,255,.25)}
+
+.content{padding:24px 16px 60px;max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+.section-header{
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:4px
+}
+.card{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px}
+.card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+.field-group{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:600;color:var(--text)}
+.field .field-hint{font-size:11px;color:var(--muted);margin-top:2px}
+.field input,.field textarea,.field select{
+  padding:11px 14px;border:2px solid var(--border);border-radius:10px;
+  font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);
+  outline:none;transition:border .2s;width:100%;background:#fff
+}
+.field input:focus,.field textarea:focus{border-color:var(--navy)}
+.field textarea{resize:vertical;min-height:70px}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #F1F5F9}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:14px;font-weight:500}
+.toggle-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:48px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:13px;transition:.3s}
+.slider:before{position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+input:checked + .slider{background:var(--navy)}
+input:checked + .slider:before{transform:translateX(22px)}
+
+.amounts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px}
+.amt-field{display:flex;flex-direction:column;gap:4px}
+.amt-field label{font-size:12px;font-weight:600;color:var(--muted)}
+.amt-field input{padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;color:var(--navy);font-family:'Syne',sans-serif;outline:none;transition:border .2s;width:100%}
+.amt-field input:focus{border-color:var(--navy)}
+
+.save-btn{
+  width:100%;padding:15px;background:var(--navy);color:#fff;
+  border:none;border-radius:12px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
+.save-btn:hover{background:#1565C0;transform:translateY(-1px)}
+.save-btn:active{transform:translateY(0)}
+.save-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.status-bar{
+  border-radius:10px;padding:12px 16px;font-size:13px;font-weight:600;
+  display:none;align-items:center;gap:8px
+}
+.status-bar.success{background:#F0FDF4;border:1px solid #BBF7D0;color:var(--green);display:flex}
+.status-bar.error{background:#FEF2F2;border:1px solid #FECACA;color:var(--red);display:flex}
+
+.preview-box{
+  background:#F8FAFF;border:2px dashed #C7D7FD;border-radius:12px;
+  padding:16px;font-size:12px;color:var(--muted);
+  font-family:monospace;word-break:break-all;line-height:1.8;max-height:160px;overflow-y:auto
+}
+.preview-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px}
+
+/* Live badge */
+.live-dot{width:8px;height:8px;background:#22C55E;border-radius:50%;display:inline-block;animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.info-card{background:#EEF2FF;border:1px solid #C7D7FD;border-radius:12px;padding:14px 16px;font-size:12px;color:var(--navy);line-height:1.7}
+.info-card b{font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">MP</div>
+    <div class="login-title">Admin Panel</div>
+    <div class="login-sub">MP GK Portal — Restricted Access</div>
+    <input class="login-input" type="email" id="adm-email" placeholder="Admin email" autocomplete="email">
+    <input class="login-input" type="password" id="adm-password" placeholder="Password" autocomplete="current-password">
+    <button class="login-btn" id="adm-login-btn" onclick="adminLogin()">Login to Admin</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── ADMIN APP ── -->
+<div id="admin-app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">MP</div>
+      <div>
+        <div class="topbar-title">Admin Panel</div>
+        <div class="topbar-sub">MP GK Portal <span class="live-dot" style="margin-left:4px"></span> Live</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="adminLogout()">Sign Out</button>
+  </div>
+
+  <div class="content">
+
+    <div class="info-card">
+      <b>ℹ️ How this works:</b> Changes saved here are written to Firebase Firestore. The donate page reads these values in real-time — every user sees updates instantly without needing an app update.
+    </div>
+
+    <!-- UPI Settings -->
+    <div>
+      <div class="section-header">💳 UPI Settings</div>
+      <div class="card">
+        <div class="card-title">📱 UPI & Payment Details</div>
+        <div class="field-group">
+          <div class="field">
+            <label>UPI ID</label>
+            <input type="text" id="cfg-upi-id" placeholder="yourname@upi">
+            <span class="field-hint">This is what users will copy and use to pay</span>
+          </div>
+          <div class="field">
+            <label>Display Name (under UPI ID)</label>
+            <input type="text" id="cfg-upi-name" placeholder="MP GK Portal — PadhleYrr">
+          </div>
+          <div class="field">
+            <label>UPI Button Text</label>
+            <input type="text" id="cfg-upi-btn" placeholder="Open UPI App to Pay">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Amount Buttons -->
+    <div>
+      <div class="section-header">💰 Donation Amounts</div>
+      <div class="card">
+        <div class="card-title">₹ Quick Amount Buttons</div>
+        <div class="amounts-grid">
+          <div class="amt-field"><label>Amount 1</label><input type="number" id="cfg-amt1" value="11"></div>
+          <div class="amt-field"><label>Amount 2 (default)</label><input type="number" id="cfg-amt2" value="21"></div>
+          <div class="amt-field"><label>Amount 3</label><input type="number" id="cfg-amt3" value="51"></div>
+          <div class="amt-field"><label>Amount 4</label><input type="number" id="cfg-amt4" value="101"></div>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Default selected amount (index 1-4)</label>
+          <select id="cfg-default-amt">
+            <option value="0">Amount 1</option>
+            <option value="1" selected>Amount 2</option>
+            <option value="2">Amount 3</option>
+            <option value="3">Amount 4</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Text -->
+    <div>
+      <div class="section-header">🎨 Page Content</div>
+      <div class="card">
+        <div class="card-title">📝 Hero Section Text</div>
+        <div class="field-group">
+          <div class="field">
+            <label>Hero Title</label>
+            <input type="text" id="cfg-hero-title" placeholder="Support MP GK Portal">
+          </div>
+          <div class="field">
+            <label>Hero Subtitle</label>
+            <textarea id="cfg-hero-sub" placeholder="This app is built with love..."></textarea>
+          </div>
+          <div class="field">
+            <label>Footer Thank-you Note</label>
+            <textarea id="cfg-footer-note" placeholder="🙏 Thank you for supporting..."></textarea>
+          </div>
+          <div class="field">
+            <label>Hint Text (below amount input)</label>
+            <input type="text" id="cfg-hint" placeholder="Every rupee helps us add more content 🙏">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visibility Toggles -->
+    <div>
+      <div class="section-header">👁️ Section Visibility</div>
+      <div class="card">
+        <div class="card-title">🔧 Show / Hide Sections</div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Show QR Code Section</div><div class="toggle-desc">PhonePe QR code card</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-show-qr" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Show UPI Section</div><div class="toggle-desc">UPI ID copy + pay button</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-show-upi" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Show Impact Section</div><div class="toggle-desc">"Your donation helps us" cards</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-show-impact" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Show Amount Selector</div><div class="toggle-desc">₹11/₹21/₹51/₹101 buttons</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-show-amounts" checked><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div id="status-bar" class="status-bar"></div>
+    <button class="save-btn" id="save-btn" onclick="saveConfig()">
+      <span>💾</span> Save & Publish to All Users
+    </button>
+
+    <!-- Live Preview -->
+    <div>
+      <div class="section-header">👁️ Current Live Config</div>
+      <div class="card">
+        <div class="card-title">📄 Stored in Firebase</div>
+        <div class="preview-label">Current values (refreshes after save):</div>
+        <div class="preview-box" id="config-preview">Loading...</div>
+        <button onclick="loadConfig()" style="margin-top:12px;padding:8px 16px;background:var(--light-navy);color:var(--navy);border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Refresh</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAJoOz73MrNt2pEVPf5Gh9BQ5r7yWz2l-Y",
+  authDomain: "mpgk-9496d.firebaseapp.com",
+  projectId: "mpgk-9496d",
+  storageBucket: "mpgk-9496d.appspot.com",
+  messagingSenderId: "77589429691",
+  appId: "1:77589429691:android:bc9b1754c40d5510c0589e"
+};
+
+// CHANGE THIS to your actual admin email
+const ADMIN_EMAIL = "admin@mpgkportal.com";
+
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const CONFIG_DOC = doc(db, "config", "donate_page");
+
+function $(id){ return document.getElementById(id); }
+
+function showStatus(msg, type) {
+  const bar = $('status-bar');
+  bar.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  bar.className = 'status-bar ' + type;
+  setTimeout(() => bar.style.display = 'none', 4000);
+}
+
+async function loadConfig() {
+  try {
+    const snap = await getDoc(CONFIG_DOC);
+    if (snap.exists()) {
+      const d = snap.data();
+      $('cfg-upi-id').value = d.upiId || '';
+      $('cfg-upi-name').value = d.upiName || '';
+      $('cfg-upi-btn').value = d.upiBtn || '';
+      $('cfg-amt1').value = d.amounts?.[0] ?? 11;
+      $('cfg-amt2').value = d.amounts?.[1] ?? 21;
+      $('cfg-amt3').value = d.amounts?.[2] ?? 51;
+      $('cfg-amt4').value = d.amounts?.[3] ?? 101;
+      $('cfg-default-amt').value = d.defaultAmtIndex ?? 1;
+      $('cfg-hero-title').value = d.heroTitle || '';
+      $('cfg-hero-sub').value = d.heroSub || '';
+      $('cfg-footer-note').value = d.footerNote || '';
+      $('cfg-hint').value = d.hint || '';
+      $('cfg-show-qr').checked = d.showQR !== false;
+      $('cfg-show-upi').checked = d.showUPI !== false;
+      $('cfg-show-impact').checked = d.showImpact !== false;
+      $('cfg-show-amounts').checked = d.showAmounts !== false;
+      $('config-preview').textContent = JSON.stringify(d, null, 2);
+    } else {
+      $('config-preview').textContent = 'No config saved yet. Fill the form and save.';
+    }
+  } catch(e) {
+    $('config-preview').textContent = 'Error loading: ' + e.message;
+  }
+}
+
+window.saveConfig = async function() {
+  const btn = $('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Saving...';
+  try {
+    const cfg = {
+      upiId: $('cfg-upi-id').value.trim(),
+      upiName: $('cfg-upi-name').value.trim(),
+      upiBtn: $('cfg-upi-btn').value.trim(),
+      amounts: [
+        parseInt($('cfg-amt1').value) || 11,
+        parseInt($('cfg-amt2').value) || 21,
+        parseInt($('cfg-amt3').value) || 51,
+        parseInt($('cfg-amt4').value) || 101
+      ],
+      defaultAmtIndex: parseInt($('cfg-default-amt').value) || 1,
+      heroTitle: $('cfg-hero-title').value.trim(),
+      heroSub: $('cfg-hero-sub').value.trim(),
+      footerNote: $('cfg-footer-note').value.trim(),
+      hint: $('cfg-hint').value.trim(),
+      showQR: $('cfg-show-qr').checked,
+      showUPI: $('cfg-show-upi').checked,
+      showImpact: $('cfg-show-impact').checked,
+      showAmounts: $('cfg-show-amounts').checked,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(CONFIG_DOC, cfg);
+    showStatus('Config published! All users will see changes instantly.', 'success');
+    await loadConfig();
+  } catch(e) {
+    showStatus('Save failed: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<span>💾</span> Save & Publish to All Users';
+};
+
+window.adminLogin = async function() {
+  const email = $('adm-email').value.trim();
+  const password = $('adm-password').value;
+  const errEl = $('login-error');
+  const btn = $('adm-login-btn');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+  btn.disabled = true; btn.textContent = 'Logging in...';
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch(e) {
+    let msg = 'Login failed. Check credentials.';
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') msg = 'Wrong email or password.';
+    else if (e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try later.';
+    errEl.textContent = msg;
+    btn.disabled = false; btn.textContent = 'Login to Admin';
+  }
+};
+
+window.adminLogout = async function() {
+  await signOut(auth);
+};
+
+// Enter key on password field
+document.addEventListener('DOMContentLoaded', () => {
+  $('adm-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.adminLogin();
+  });
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // Only allow admin email
+    if (user.email !== ADMIN_EMAIL) {
+      await signOut(auth);
+      $('login-error').textContent = 'Access denied. Not an admin account.';
+      return;
+    }
+    $('login-screen').style.display = 'none';
+    $('admin-app').style.display = 'block';
+    await loadConfig();
+  } else {
+    $('login-screen').style.display = 'flex';
+    $('admin-app').style.display = 'none';
+  }
+});
+
+window.loadConfig = loadConfig;
+</script>
+</body>
+</html>
