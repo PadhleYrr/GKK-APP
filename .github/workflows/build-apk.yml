@@ -64,6 +64,9 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Copy google-services.json
+        run: cp google-services*.json android/app/ 2>/dev/null || echo "google-services.json not found"
+
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
