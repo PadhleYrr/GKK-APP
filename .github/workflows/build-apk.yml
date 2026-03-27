@@ -67,40 +67,54 @@ jobs:
       - name: Copy google-services.json
         run: cp google-services*.json android/app/ 2>/dev/null || echo "google-services.json not found"
 
+      - name: Sync web files to Android
+        run: npx cap sync android
+
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
       - name: Set app icon
         run: |
           if [ -f "icon.png" ]; then
+            # Remove default Capacitor icons first
+            rm -f android/app/src/main/res/mipmap-*/ic_launcher*.png
+
             mkdir -p android/app/src/main/res/mipmap-xxxhdpi
             mkdir -p android/app/src/main/res/mipmap-xxhdpi
             mkdir -p android/app/src/main/res/mipmap-xhdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
             mkdir -p android/app/src/main/res/mipmap-mdpi
-            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-            echo "Icon set successfully"
-          else
-            echo "No icon.png found, skipping"
-          fi
 
-      - name: Sync web files to Android
-        run: npx cap sync android
+            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+
+            echo "✅ Icon set successfully"
+          else
+            echo "❌ No icon.png found!"
+            exit 1
+          fi
 
       - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+
+      - name: Get SHA-1 Fingerprint
+        run: |
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android
 
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk MPPSC.apk
