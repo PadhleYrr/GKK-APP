@@ -103,14 +103,6 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Get SHA-1 Fingerprint
-        run: |
-          keytool -list -v \
-            -keystore ~/.android/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android \
-            -keypass android
-
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk MPPSC.apk
 
