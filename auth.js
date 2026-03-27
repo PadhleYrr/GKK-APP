@@ -7,12 +7,14 @@
 // Replace these values with YOUR Firebase project config
 // Get from: Firebase Console → Project Settings → Your Apps
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAJoOz73MrNt2pEVPf5Gh9BQ5r7yWz2l-Y",
+  authDomain: "mpgk-9496d.firebaseapp.com",
+  projectId: "mpgk-9496d",
+  storageBucket: "mpgk-9496d.firebasestorage.app",
+  messagingSenderId: "77589429691",
+  appId: "1:77589429691:android:bc9b1754c40d5510c0589e"
+  // NOTE: For web app, you may need to register a web app in Firebase Console
+  // and get the specific web appId. The Android appId is shown above.
 };
 
 // ── RAZORPAY CONFIG ──────────────────────────────────────
@@ -62,7 +64,11 @@ function showLoginScreen() {
   el.style.cssText = 'position:fixed;inset:0;background:#1A237E;z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px';
   el.innerHTML = `
     <div style="background:#fff;border-radius:24px;padding:36px 28px;max-width:360px;width:100%;text-align:center">
-      <img src="icon.png" onerror="this.style.display='none'" style="width:72px;height:72px;border-radius:16px;margin-bottom:16px;object-fit:cover">
+      <div style="width:72px;height:72px;border-radius:16px;margin-bottom:16px;margin-left:auto;margin-right:auto;background:linear-gradient(135deg,#1A237E 0%,#5E35B1 100%);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:32px">
+        MP
+      </div>
+      <!-- Try loading logo image as fallback (optional) -->
+      <img src="icon.png" onerror="this.style.display='none'" style="position:absolute;width:72px;height:72px;border-radius:16px;margin-bottom:16px;object-fit:cover;display:none">
       <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1A237E;margin-bottom:6px">MP GK Portal</div>
       <div style="font-size:13px;color:#64748B;margin-bottom:6px">MPPSC 2026 — Complete Prep</div>
 
