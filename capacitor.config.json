@@ -1,0 +1,8 @@
+{
+  "appId": "com.padhleyrr.mppsc",
+  "appName": "MPPSC App",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
