@@ -1,0 +1,87 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read version from version.json
+        id: version
+        run: echo "VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['version'])")" >> $GITHUB_OUTPUT
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare www folder
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp style.css www/
+          cp app.js www/
+          cp updater.js www/
+          cp version.json www/
+          cp data_notes.js www/
+          cp data_pyq.js www/
+          cp data_q.js www/
+          cp maps.html www/ 2>/dev/null || true
+          cp pyq_2021_paper1.js www/ 2>/dev/null || true
+          cp pyq_2021_paper2.js www/ 2>/dev/null || true
+          cp pyq_2022_paper1.js www/ 2>/dev/null || true
+          cp pyq_2022_paper2.js www/ 2>/dev/null || true
+          cp pyq_2023_paper1.js www/ 2>/dev/null || true
+          cp pyq_2023_paper2.js www/ 2>/dev/null || true
+          cp pyq_2024_paper1.js www/ 2>/dev/null || true
+          cp pyq_2024_paper2.js www/ 2>/dev/null || true
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web files to Android
+        run: npx cap sync android
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk MPPSC.apk
+
+      - name: Delete old release if exists
+        run: gh release delete v${{ steps.version.outputs.VERSION }} --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release with APK
+        run: |
+          gh release create v${{ steps.version.outputs.VERSION }} MPPSC.apk \
+            --title "MPPSC App v${{ steps.version.outputs.VERSION }}" \
+            --notes "$(python3 -c "import json; print(json.load(open('version.json'))['changelog'])")"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact too
+        uses: actions/upload-artifact@v4
+        with:
+          name: MPPSC-v${{ steps.version.outputs.VERSION }}
+          path: MPPSC.apk
