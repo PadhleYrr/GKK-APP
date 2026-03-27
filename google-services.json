@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "77589429691",
+    "project_id": "mpgk-9496d",
+    "storage_bucket": "mpgk-9496d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:77589429691:android:bc9b1754c40d5510c0589e",
+        "android_client_info": {
+          "package_name": "com.padhleyrr.mppsc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJoOz73MrNt2pEVPf5Gh9BQ5r7yWz2l-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
