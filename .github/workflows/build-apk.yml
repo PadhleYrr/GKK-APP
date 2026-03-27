@@ -70,21 +70,15 @@ jobs:
       - name: Sync web files to Android
         run: npx cap sync android
 
-      - name: Install ImageMagick
-        run: sudo apt-get install -y imagemagick
-
-      - name: Set app icon
       - name: Set app icon
         run: |
           if [ -f "icon.png" ]; then
             sudo apt-get install -y imagemagick
-
             mkdir -p android/app/src/main/res/mipmap-xxxhdpi
             mkdir -p android/app/src/main/res/mipmap-xxhdpi
             mkdir -p android/app/src/main/res/mipmap-xhdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
             mkdir -p android/app/src/main/res/mipmap-mdpi
-
             convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
             convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
             convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
@@ -100,8 +94,8 @@ jobs:
             convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
             convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
             convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-
             echo "✅ Icon set successfully"
+          fi
 
       - name: Build Debug APK
         run: |
