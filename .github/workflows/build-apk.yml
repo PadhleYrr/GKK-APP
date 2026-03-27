@@ -74,10 +74,10 @@ jobs:
         run: sudo apt-get install -y imagemagick
 
       - name: Set app icon
+      - name: Set app icon
         run: |
           if [ -f "icon.png" ]; then
-            # Remove default Capacitor icons first
-            rm -f android/app/src/main/res/mipmap-*/ic_launcher*.png
+            sudo apt-get install -y imagemagick
 
             mkdir -p android/app/src/main/res/mipmap-xxxhdpi
             mkdir -p android/app/src/main/res/mipmap-xxhdpi
@@ -86,21 +86,22 @@ jobs:
             mkdir -p android/app/src/main/res/mipmap-mdpi
 
             convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
             convert icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
             convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
             convert icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
             convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
             convert icon.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
             convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
             convert icon.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
             convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
             convert icon.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
 
             echo "✅ Icon set successfully"
-          else
-            echo "❌ No icon.png found!"
-            exit 1
-          fi
 
       - name: Build Debug APK
         run: |
