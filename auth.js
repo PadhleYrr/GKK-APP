@@ -4,12 +4,12 @@
 // ═══════════════════════════════════════════════════════
 
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAJoOz73MrNt2pEVPf5Gh9BQ5r7yWz2l-Y",
+  authDomain: "mpgk-9496d.firebaseapp.com",
+  projectId: "mpgk-9496d",
+  storageBucket: "mpgk-9496d.firebasestorage.app",
+  messagingSenderId: "77589429691",
+  appId: "1:77589429691:android:bc9b1754c40d5510c0589e"
 };
 
 const RAZORPAY_KEY = "YOUR_RAZORPAY_KEY_ID";
