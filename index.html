@@ -7,9 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <!-- Razorpay -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
@@ -39,7 +39,7 @@
 <div class="nav-item" onclick="showPage('weakareas')"><span class="ni">📊</span>Weak Areas</div>
 <div class="nav-item" onclick="showPage('progress')"><span class="ni">📈</span>My Progress</div>
 <div class="nav-item" onclick="showPage('donate')"><span class="ni">❤️</span>Support Us</div>
-<div class="nav-item" onclick="showPage('review')" style="display:none" id="nav-review">
+<div class="nav-item" onclick="showPage('review')" style="display:none">
 <span class="ni">🚩</span>Review Flags
 <span class="nav-badge" id="flag-count-badge" style="background:#DC2626;color:#fff;display:none">0</span>
 </div>
@@ -369,91 +369,8 @@
 </div>
 </div>
 <!-- ═══ DONATE PAGE ═══ -->
-<div class="page" id="page-donate">
-<style>
-.don-hero{background:var(--navy);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;color:#fff}
-.don-hero-icon{font-size:48px;margin-bottom:12px}
-.don-hero-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px}
-.don-hero-sub{font-size:13px;opacity:.75;line-height:1.6}
-.don-amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
-.don-amt-btn{padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;color:var(--text);font-family:'DM Sans',sans-serif}
-.don-amt-btn.active,.don-amt-btn:hover{border-color:var(--navy);background:#EEF2FF;color:var(--navy)}
-.don-custom-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;background:var(--card)}
-.don-custom-input:focus{border-color:var(--navy)}
-.don-upi-box{background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;margin:12px 0;cursor:pointer;transition:all .2s;text-align:center}
-.don-upi-box:hover{background:#E0E8FF}
-.don-upi-id{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px}
-.don-upi-label{font-size:11px;color:var(--muted);margin-top:4px}
-.don-copy-hint{font-size:12px;color:var(--saff);margin-top:6px;font-weight:600}
-.don-pay-btns{display:flex;flex-direction:column;gap:10px;margin-top:16px}
-.don-pay-btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;transition:all .2s}
-.don-gpay{background:#1A73E8;color:#fff}
-.don-phonepe{background:#5F259F;color:#fff}
-.don-paytm{background:#00BAF2;color:#fff}
-.don-impact{display:flex;flex-direction:column;gap:10px}
-.don-impact-item{display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px}
-.don-impact-icon{font-size:20px;flex-shrink:0}
-.don-impact-text{font-size:13px;color:var(--text);line-height:1.5}
-.don-impact-text b{color:var(--navy)}
-.don-thanks{text-align:center;font-size:12px;color:var(--muted);line-height:1.7;padding:16px 0}
-</style>
-<div style="max-width:480px;margin:0 auto">
-
-  <div class="don-hero">
-    <div class="don-hero-icon">❤️</div>
-    <div class="don-hero-title">Support MP GK Portal</div>
-    <div class="don-hero-sub">This app is built with love for MPPSC aspirants across Madhya Pradesh. Your support keeps it free and growing!</div>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:16px">Choose Amount</div>
-    <div class="don-amounts">
-      <button class="don-amt-btn" onclick="donSetAmount(11,this)">₹11</button>
-      <button class="don-amt-btn active" onclick="donSetAmount(21,this)">₹21</button>
-      <button class="don-amt-btn" onclick="donSetAmount(51,this)">₹51</button>
-      <button class="don-amt-btn" onclick="donSetAmount(101,this)">₹101</button>
-    </div>
-    <input class="don-custom-input" type="number" id="don-amount" value="21" placeholder="Enter custom amount" oninput="donClearBtns()">
-    <div style="font-size:12px;color:var(--muted);text-align:center">Every rupee helps us add more content 🙏</div>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:12px">Pay via UPI</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:4px;text-align:center">Send to UPI ID</div>
-    <div class="don-upi-box" onclick="donCopyUPI()">
-      <div class="don-upi-id" id="don-upi-display">padhleyrr@upi</div>
-      <div class="don-upi-label">MP GK Portal — PadhleYrr</div>
-      <div class="don-copy-hint">📋 Tap to copy</div>
-    </div>
-    <div class="don-pay-btns">
-      <button class="don-pay-btn don-gpay" onclick="donOpenGPay()"><span style="font-size:18px">G</span> Pay with Google Pay</button>
-      <button class="don-pay-btn don-phonepe" onclick="donOpenPhonePe()"><span style="font-size:18px">📱</span> Pay with PhonePe</button>
-      <button class="don-pay-btn don-paytm" onclick="donOpenPaytm()"><span style="font-size:18px">💙</span> Pay with Paytm</button>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:12px">Your donation helps us</div>
-    <div class="don-impact">
-      <div class="don-impact-item"><div class="don-impact-icon">📚</div><div class="don-impact-text"><b>Add more questions</b> — 50+ new MCQs every month based on latest MPPSC pattern</div></div>
-      <div class="don-impact-item"><div class="don-impact-icon">🔔</div><div class="don-impact-text"><b>Build new features</b> — Daily current affairs, Hindi UI, offline mode & more</div></div>
-      <div class="don-impact-item"><div class="don-impact-icon">🆓</div><div class="don-impact-text"><b>Keep it affordable</b> — Your support lets us keep premium at just ₹100 for rural students</div></div>
-      <div class="don-impact-item"><div class="don-impact-icon">🏆</div><div class="don-impact-text"><b>Server costs</b> — Keep the app running fast and available 24/7 for all aspirants</div></div>
-    </div>
-  </div>
-
-  <div class="don-thanks">🙏 Thank you for supporting MPPSC aspirants across Madhya Pradesh!<br>Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP</div>
-</div>
-<script>
-const DON_UPI = 'padhleyrr@upi';
-function donSetAmount(v,btn){document.getElementById('don-amount').value=v;document.querySelectorAll('.don-amt-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
-function donClearBtns(){document.querySelectorAll('.don-amt-btn').forEach(b=>b.classList.remove('active'))}
-function donGetAmount(){return parseInt(document.getElementById('don-amount').value)||21}
-function donCopyUPI(){const el=document.getElementById('don-upi-display');if(navigator.clipboard){navigator.clipboard.writeText(DON_UPI).then(()=>{el.textContent='✅ Copied!';setTimeout(()=>{el.textContent=DON_UPI},2000)})}else{const ta=document.createElement('textarea');ta.value=DON_UPI;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();el.textContent='✅ Copied!';setTimeout(()=>{el.textContent=DON_UPI},2000)}}
-function donOpenGPay(){const a=donGetAmount();window.location.href=`tez://upi/pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation`;setTimeout(()=>{window.location.href=`upi://pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR`},1500)}
-function donOpenPhonePe(){const a=donGetAmount();window.location.href=`phonepe://pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation`;setTimeout(()=>{window.location.href=`upi://pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR`},1500)}
-function donOpenPaytm(){const a=donGetAmount();window.location.href=`paytmmp://pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation`;setTimeout(()=>{window.location.href=`upi://pay?pa=${DON_UPI}&pn=MPGKPortal&am=${a}&cu=INR`},1500)}
-</script>
+<div class="page" id="page-donate" style="height:calc(100vh - 80px);overflow:hidden">
+<iframe src="donate.html" style="width:100%;height:100%;border:none;display:block" scrolling="yes"></iframe>
 </div>
 
 <script src="data_q.js"></script>
