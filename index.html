@@ -369,9 +369,130 @@
 </div>
 </div>
 <!-- ═══ DONATE PAGE ═══ -->
-<div class="page" id="page-donate" style="height:calc(100vh - 80px);overflow:hidden">
-<iframe src="donate.html" style="width:100%;height:100%;border:none;display:block" scrolling="yes"></iframe>
+<div class="page" id="page-donate" style="height:calc(100vh - 80px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:#F4F6FB">
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 40px;font-family:'DM Sans',sans-serif">
+
+  <div style="background:#1A237E;border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;color:#fff">
+    <div style="font-size:48px;margin-bottom:12px">❤️</div>
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px">Support MP GK Portal</div>
+    <div style="font-size:13px;opacity:.75;line-height:1.6">This app is built with love for MPPSC aspirants across Madhya Pradesh. Your support keeps it free and growing!</div>
+  </div>
+
+  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Choose Amount</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+      <button onclick="donateSetAmount(11,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹11</button>
+      <button onclick="donateSetAmount(21,this)" style="padding:10px 4px;border:2px solid #1A237E;border-radius:10px;background:#EEF2FF;font-size:14px;font-weight:700;cursor:pointer;color:#1A237E">₹21</button>
+      <button onclick="donateSetAmount(51,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹51</button>
+      <button onclick="donateSetAmount(101,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹101</button>
+    </div>
+    <input id="donate-amount-input" type="number" value="21" placeholder="Enter custom amount" oninput="donateClearBtns()"
+      style="width:100%;padding:12px 16px;border:2px solid #E2E8F0;border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:#1E293B;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:16px">
+    <div style="font-size:12px;color:#64748B;text-align:center">Every rupee helps us add more content 🙏</div>
+  </div>
+
+  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Pay via UPI</div>
+    <div style="text-align:center">
+      <div style="font-size:13px;color:#64748B;margin-bottom:4px">Send to UPI ID</div>
+      <div onclick="donateCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;margin:12px 0;cursor:pointer">
+        <div id="donate-upi-display" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#1A237E;letter-spacing:.5px">padhleyrr@upi</div>
+        <div style="font-size:11px;color:#64748B;margin-top:4px">MP GK Portal — PadhleYrr</div>
+        <div style="font-size:12px;color:#FF6B00;margin-top:6px;font-weight:600">📋 Tap to copy</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+        <button onclick="donateOpenGPay()" style="width:100%;padding:14px;background:#1A73E8;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">G Pay with Google Pay</button>
+        <button onclick="donateOpenPhonePe()" style="width:100%;padding:14px;background:#5F259F;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">📱 Pay with PhonePe</button>
+        <button onclick="donateOpenPaytm()" style="width:100%;padding:14px;background:#00BAF2;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">💙 Pay with Paytm</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Scan QR Code</div>
+    <div style="text-align:center;padding:20px 0">
+      <!-- Replace div below with: <img src="upi-qr.png" style="width:180px;border-radius:12px"> -->
+      <div style="width:180px;height:180px;background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#64748B;font-size:12px;gap:8px">
+        <span style="font-size:32px">📱</span><span>Add your UPI QR image here</span><span style="font-size:10px">Replace with upi-qr.png</span>
+      </div>
+      <div style="font-size:12px;color:#64748B;margin-top:12px;line-height:1.6">Open any UPI app → Scan QR → Enter amount → Pay<br>Works with GPay, PhonePe, Paytm, BHIM &amp; all UPI apps</div>
+    </div>
+  </div>
+
+  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Your donation helps us</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+        <span style="font-size:20px;flex-shrink:0">📚</span>
+        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Add more questions</b> — We add 50+ new MCQs every month based on latest MPPSC pattern</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+        <span style="font-size:20px;flex-shrink:0">🔔</span>
+        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Build new features</b> — Daily current affairs, Hindi UI, offline mode &amp; more</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+        <span style="font-size:20px;flex-shrink:0">🆓</span>
+        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Keep it affordable</b> — Your support lets us keep premium at just ₹100 for rural students</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+        <span style="font-size:20px;flex-shrink:0">🏆</span>
+        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Server costs</b> — Keep the app running fast and available 24/7 for all aspirants</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:12px;color:#64748B;line-height:1.7;padding:16px 0">
+    🙏 Thank you for supporting MPPSC aspirants across Madhya Pradesh!<br>
+    Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP
+  </div>
+
 </div>
+</div>
+
+<script>
+(function(){
+  const DONATE_UPI = 'padhleyrr@upi';
+  window.donateSetAmount = function(val, btn) {
+    document.getElementById('donate-amount-input').value = val;
+    document.querySelectorAll('#page-donate button[onclick^="donateSetAmount"]').forEach(b => {
+      b.style.borderColor='#E2E8F0'; b.style.background='#fff'; b.style.color='#1E293B';
+    });
+    btn.style.borderColor='#1A237E'; btn.style.background='#EEF2FF'; btn.style.color='#1A237E';
+  };
+  window.donateClearBtns = function() {
+    document.querySelectorAll('#page-donate button[onclick^="donateSetAmount"]').forEach(b => {
+      b.style.borderColor='#E2E8F0'; b.style.background='#fff'; b.style.color='#1E293B';
+    });
+  };
+  window.donateCopyUPI = function() {
+    const el = document.getElementById('donate-upi-display');
+    const orig = el.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(DONATE_UPI).then(() => { el.textContent='✅ Copied!'; setTimeout(()=>{ el.textContent=orig; },2000); });
+    } else {
+      const ta=document.createElement('textarea'); ta.value=DONATE_UPI;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      el.textContent='✅ Copied!'; setTimeout(()=>{ el.textContent=orig; },2000);
+    }
+  };
+  function getAmt(){ return parseInt(document.getElementById('donate-amount-input').value)||21; }
+  window.donateOpenGPay = function(){
+    const a=getAmt();
+    window.location.href=`tez://upi/pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
+    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
+  };
+  window.donateOpenPhonePe = function(){
+    const a=getAmt();
+    window.location.href=`phonepe://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
+    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
+  };
+  window.donateOpenPaytm = function(){
+    const a=getAmt();
+    window.location.href=`paytmmp://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
+    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
+  };
+})();
+</script>
 
 <script src="data_q.js"></script>
 <script src="pyq_2024_paper1.js"></script>
