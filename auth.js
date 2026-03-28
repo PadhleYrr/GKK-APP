@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// auth.js - EMAIL/PASSWORD LOGIN + ADMIN VIA FIREBASE
+// auth.js — FINAL FIXED VERSION
+// Fixes: trial countdown, admin review tab, real-time timer
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const FIREBASE_CONFIG = {
@@ -14,16 +15,16 @@ const FIREBASE_CONFIG = {
 const RAZORPAY_KEY = "YOUR_RAZORPAY_KEY_ID";
 const PREMIUM_PRICE = 10000;
 const PREMIUM_MONTHS = 6;
+const TRIAL_DAYS = 7;
 
-// ── ADMIN EMAILS (these are fetched from Firestore, not hardcoded) ───────────
-// To add admin: Go to Firebase Console → Firestore → Collection "config"
-// → Document "admins" → Field "emails" (array) → Add your email
+// Admin emails loaded from Firestore — never hardcoded here
 let ADMIN_EMAILS = [];
 
 let currentUser = null;
 let firebaseAuth = null;
 let firestoreDb = null;
 let firebaseInitialized = false;
+let trialTimerInterval = null;
 
 // ── INITIALIZE FIREBASE ──────────────────────────────────────────────────────
 async function initFirebase() {
@@ -37,23 +38,27 @@ async function initFirebase() {
     firestoreDb = getFirestore(app);
     firebaseInitialized = true;
 
-    // Load admin emails from Firestore (safe - not in code)
+    // ── FIX: Load admin emails from Firestore safely ──
+    // In Firebase Console → Firestore → collection "config" → document "admins"
+    // → field "emails" (array) → add your email strings there
     try {
       const snap = await getDoc(doc(firestoreDb, "config", "admins"));
       if (snap.exists() && snap.data().emails) {
         ADMIN_EMAILS = snap.data().emails;
+        console.log('✅ Admin list loaded:', ADMIN_EMAILS.length, 'admins');
       }
-    } catch(e) { console.warn('Could not load admin list'); }
+    } catch(e) { console.warn('Could not load admin list:', e.message); }
 
     onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         currentUser = user;
-        // ── FIX 1: Always start trial on login if not already started ──
+        // ── FIX: startTrialIfNew on EVERY login, not just register ──
         startTrialIfNew(user.uid);
         saveUserLocally(user);
         onUserLoggedIn(user);
       } else {
         currentUser = null;
+        stopTrialTimer();
       }
     });
 
@@ -63,14 +68,14 @@ async function initFirebase() {
   }
 }
 
-// ── CHECK IF CURRENT USER IS ADMIN ──────────────────────────────────────────
+// ── ADMIN CHECK ───────────────────────────────────────────────────────────────
 function isAdmin() {
   const user = getLocalUser();
   if (!user || !user.email) return false;
   return ADMIN_EMAILS.includes(user.email);
 }
 
-// ── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+// ── LOGIN SCREEN ──────────────────────────────────────────────────────────────
 function showLoginScreen() {
   if (localStorage.getItem('mppsc_user')) return;
   if (document.getElementById('login-screen')) return;
@@ -91,11 +96,11 @@ function showLoginScreen() {
           ✅ Full PYQ papers access<br>
           ✅ Timed mock tests<br>
           ✅ Complete notes & flashcards<br>
-          ✅ After 7 days — only ₹100 / 6 months
+          <span style="color:#1A237E;font-weight:600">After 7 days — only ₹100 / 6 months</span>
         </div>
       </div>
 
-      <div id="login-tab-btns" style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
         <button onclick="switchTab('login')" id="tab-login"
           style="flex:1;padding:8px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px">Login</button>
         <button onclick="switchTab('register')" id="tab-register"
@@ -106,7 +111,7 @@ function showLoginScreen() {
         style="width:100%;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none">
       <input id="auth-password" type="password" placeholder="Password"
         style="width:100%;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none">
-      <input id="auth-name" type="text" placeholder="Your name (for registration)"
+      <input id="auth-name" type="text" placeholder="Your name"
         style="width:100%;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;margin-bottom:14px;box-sizing:border-box;outline:none;display:none">
 
       <button onclick="handleAuth()" id="auth-btn"
@@ -134,52 +139,42 @@ function switchTab(tab) {
   const tabLogin = document.getElementById('tab-login');
   const tabRegister = document.getElementById('tab-register');
   const forgot = document.getElementById('forgot-link');
-
   if (tab === 'login') {
     nameField.style.display = 'none';
     btn.textContent = 'Login';
-    tabLogin.style.background = '#1A237E'; tabLogin.style.color = '#fff';
-    tabRegister.style.background = '#F1F5F9'; tabRegister.style.color = '#374151';
+    tabLogin.style.cssText += ';background:#1A237E;color:#fff';
+    tabRegister.style.cssText += ';background:#F1F5F9;color:#374151';
     forgot.style.display = 'block';
   } else {
     nameField.style.display = 'block';
     btn.textContent = 'Create Account';
-    tabRegister.style.background = '#1A237E'; tabRegister.style.color = '#fff';
-    tabLogin.style.background = '#F1F5F9'; tabLogin.style.color = '#374151';
+    tabRegister.style.cssText += ';background:#1A237E;color:#fff';
+    tabLogin.style.cssText += ';background:#F1F5F9;color:#374151';
     forgot.style.display = 'none';
   }
   document.getElementById('login-error').style.display = 'none';
 }
 
 async function handleAuth() {
-  if (!firebaseInitialized || !firebaseAuth) {
-    showAuthError('Please wait, loading...');
-    return;
-  }
-
+  if (!firebaseInitialized || !firebaseAuth) { showAuthError('Please wait, loading...'); return; }
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const name = document.getElementById('auth-name').value.trim();
   const btn = document.getElementById('auth-btn');
-
   if (!email || !password) { showAuthError('Please enter email and password.'); return; }
   if (currentTab === 'register' && !name) { showAuthError('Please enter your name.'); return; }
   if (password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
-
   btn.disabled = true;
   btn.textContent = currentTab === 'login' ? 'Logging in...' : 'Creating account...';
-
   try {
     const { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } =
       await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
-
     if (currentTab === 'login') {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
     } else {
       const result = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await updateProfile(result.user, { displayName: name });
     }
-    // onAuthStateChanged will handle the rest including startTrialIfNew
   } catch (error) {
     let msg = 'Something went wrong. Try again.';
     if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = 'No account found with this email.';
@@ -200,9 +195,7 @@ async function handleForgotPassword() {
     const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
     await sendPasswordResetEmail(firebaseAuth, email);
     showAuthError('✅ Reset email sent! Check your inbox.', '#15803D');
-  } catch (e) {
-    showAuthError('Could not send reset email. Check the address.');
-  }
+  } catch (e) { showAuthError('Could not send reset email. Check the address.'); }
 }
 
 function showAuthError(msg, color) {
@@ -210,7 +203,7 @@ function showAuthError(msg, color) {
   if (el) { el.textContent = msg; el.style.color = color || '#DC2626'; el.style.display = 'block'; }
 }
 
-// ── USER HELPERS ─────────────────────────────────────────────────────────────
+// ── USER HELPERS ──────────────────────────────────────────────────────────────
 function saveUserLocally(user) {
   localStorage.setItem('mppsc_user', JSON.stringify({
     uid: user.uid,
@@ -219,18 +212,12 @@ function saveUserLocally(user) {
     photo: user.photoURL || null
   }));
 }
-
 function getLocalUser() {
   try { return JSON.parse(localStorage.getItem('mppsc_user')); } catch { return null; }
 }
+function removeLoginScreen() { document.getElementById('login-screen')?.remove(); }
 
-function removeLoginScreen() {
-  document.getElementById('login-screen')?.remove();
-}
-
-// ── TRIAL SYSTEM ─────────────────────────────────────────────────────────────
-// FIX 1: startTrialIfNew is called on EVERY login, not just registration
-// So existing users who logged in before get their trial starting now
+// ── TRIAL SYSTEM ──────────────────────────────────────────────────────────────
 function startTrialIfNew(uid) {
   const key = 'trial_start_' + uid;
   if (!localStorage.getItem(key)) {
@@ -239,20 +226,59 @@ function startTrialIfNew(uid) {
   }
 }
 
-function getTrialDaysLeft(uid) {
+function getTrialMsLeft(uid) {
   const start = parseInt(localStorage.getItem('trial_start_' + uid) || '0');
-  if (!start) return 7; // if no start date, give full trial (shouldn't happen now)
-  return Math.max(0, Math.ceil(7 - (Date.now() - start) / 86400000));
+  if (!start) return TRIAL_DAYS * 86400000;
+  const elapsed = Date.now() - start;
+  return Math.max(0, TRIAL_DAYS * 86400000 - elapsed);
 }
 
-function isTrialActive(uid) { return getTrialDaysLeft(uid) > 0; }
+function getTrialDaysLeft(uid) {
+  return Math.ceil(getTrialMsLeft(uid) / 86400000);
+}
+
+function isTrialActive(uid) { return getTrialMsLeft(uid) > 0; }
+
+// ── REAL-TIME TRIAL TIMER ─────────────────────────────────────────────────────
+function startTrialTimer(uid) {
+  stopTrialTimer();
+  updateTrialTimerDisplay(uid);
+  trialTimerInterval = setInterval(() => updateTrialTimerDisplay(uid), 1000);
+}
+
+function stopTrialTimer() {
+  if (trialTimerInterval) { clearInterval(trialTimerInterval); trialTimerInterval = null; }
+}
+
+function updateTrialTimerDisplay(uid) {
+  const msLeft = getTrialMsLeft(uid);
+  const el = document.getElementById('trial-timer');
+  if (!el) return;
+
+  if (msLeft <= 0) {
+    el.textContent = 'Trial expired';
+    el.style.color = '#DC2626';
+    stopTrialTimer();
+    return;
+  }
+
+  const days = Math.floor(msLeft / 86400000);
+  const hours = Math.floor((msLeft % 86400000) / 3600000);
+  const mins = Math.floor((msLeft % 3600000) / 60000);
+  const secs = Math.floor((msLeft % 60000) / 1000);
+
+  if (days > 0) {
+    el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
+  } else {
+    el.textContent = `${hours}h ${mins}m ${secs}s`;
+  }
+}
 
 // ── PREMIUM SYSTEM ────────────────────────────────────────────────────────────
 function isPremium() {
   const user = getLocalUser();
   if (!user) return false;
-  // Admins always have premium
-  if (ADMIN_EMAILS.includes(user.email)) return true;
+  if (ADMIN_EMAILS.includes(user.email)) return true; // admins always premium
   return parseInt(localStorage.getItem('premium_expiry_' + user.uid) || '0') > Date.now();
 }
 
@@ -272,21 +298,27 @@ function getPremiumDaysLeft() {
 function onUserLoggedIn(user) {
   removeLoginScreen();
   updateUserBadge();
-  const u = getLocalUser() || { uid: user.uid };
-  const daysLeft = getTrialDaysLeft(u.uid);
-  if (!isPremium() && daysLeft > 0 && daysLeft <= 2) {
-    setTimeout(() => showToastSafe(`⚠️ Trial ends in ${daysLeft} day${daysLeft > 1 ? 's' : ''}!`, '#D97706'), 3000);
-  }
-  // Show review tab only to admins
   updateReviewTabVisibility();
+
+  const u = getLocalUser() || { uid: user.uid };
+  if (!isPremium() && isTrialActive(u.uid)) {
+    startTrialTimer(u.uid);
+    const daysLeft = getTrialDaysLeft(u.uid);
+    if (daysLeft <= 2) {
+      setTimeout(() => showToastSafe(`⚠️ Trial ends in ${daysLeft} day${daysLeft > 1 ? 's' : ''}!`, '#D97706'), 3000);
+    }
+  }
 }
 
-// ── FIX 3: ADMIN - show/hide review tab ──────────────────────────────────────
+// ── FIX: ADMIN REVIEW TAB VISIBILITY ─────────────────────────────────────────
 function updateReviewTabVisibility() {
-  // The review nav item should only be visible to admins
-  const reviewNavItems = document.querySelectorAll('.nav-item');
-  reviewNavItems.forEach(item => {
-    if (item.textContent.includes('Review') || item.getAttribute('onclick')?.includes('review')) {
+  // Uses id="nav-review" set in index.html
+  const reviewTab = document.getElementById('nav-review');
+  if (reviewTab) reviewTab.style.display = isAdmin() ? '' : 'none';
+  // Also check by onclick for safety
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const onclick = item.getAttribute('onclick') || '';
+    if (onclick.includes("'review'")) {
       item.style.display = isAdmin() ? '' : 'none';
     }
   });
@@ -315,45 +347,142 @@ function updateUserBadge() {
       : premium
         ? `<span style="background:#15803D;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px">PRO</span>`
         : daysLeft > 0
-          ? `<span style="background:#D97706;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px">${daysLeft}d trial</span>`
+          ? `<span style="background:#D97706;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px">${daysLeft}d left</span>`
           : `<span style="background:#DC2626;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px">Expired</span>`}
   `;
 }
 
 // ── ACCOUNT MODAL ─────────────────────────────────────────────────────────────
 function showAccountModal() {
-  if (document.getElementById('account-modal')) { document.getElementById('account-modal').remove(); return; }
+  if (document.getElementById('account-modal')) { document.getElementById('account-modal').remove(); stopTrialTimer(); return; }
   const user = getLocalUser();
   if (!user) return;
   const premium = isPremium();
   const admin = isAdmin();
-  const daysLeft = premium ? getPremiumDaysLeft() : getTrialDaysLeft(user.uid);
-  const el = document.createElement('div');
-  el.id = 'account-modal';
-  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:28px;max-width:340px;width:100%;text-align:center">
-      <div style="font-size:48px;margin-bottom:12px">👤</div>
-      <div style="font-size:17px;font-weight:800;margin-bottom:4px">${user.name || 'User'}</div>
-      <div style="font-size:12px;color:#64748B;margin-bottom:16px">${user.email || ''}</div>
-      <div style="background:${admin ? '#F5F3FF' : premium ? '#F0FDF4' : daysLeft > 0 ? '#FFFBEB' : '#FEF2F2'};border-radius:12px;padding:14px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:${admin ? '#7C3AED' : premium ? '#15803D' : daysLeft > 0 ? '#D97706' : '#DC2626'}">
-          ${admin ? '🛡️ Admin Account' : premium ? `✅ Premium — ${daysLeft} days left` : daysLeft > 0 ? `⏳ Trial — ${daysLeft} days left` : '❌ Trial Expired'}
-        </div>
-        ${!premium && !admin ? `<div style="font-size:12px;color:#64748B;margin-top:4px">Unlock full access for ₹100 / 6 months</div>` : ''}
+  const premiumDays = getPremiumDaysLeft();
+  const trialActive = isTrialActive(user.uid);
+
+  const features = [
+    { icon:'📚', label:'421+ MCQs', detail:'Full MP GK question bank, all 15 chapters' },
+    { icon:'📄', label:'PYQ Papers 2021–24', detail:'4 years of real MPPSC papers with answers' },
+    { icon:'⏱️', label:'Timed Mock Tests', detail:'Exam-style simulation with full scoring' },
+    { icon:'🃏', label:'Flashcard Revision', detail:'Smart cards for every topic & subtopic' },
+    { icon:'📊', label:'Weak Area Tracker', detail:'Pinpoint exactly where you need to improve' },
+    { icon:'📈', label:'Progress Analytics', detail:'Streaks, accuracy charts & detailed stats' },
+    { icon:'🗺️', label:'MP Map Quiz', detail:'Interactive geography questions on the map' },
+    { icon:'🔔', label:'Daily 10 Challenge', detail:'10 fresh questions daily to build the habit' },
+  ];
+
+  const statusColor = admin ? '#7C3AED' : premium ? '#15803D' : trialActive ? '#D97706' : '#DC2626';
+  const statusBg = admin ? 'linear-gradient(135deg,#F5F3FF,#EDE9FE)' : premium ? 'linear-gradient(135deg,#F0FDF4,#DCFCE7)' : trialActive ? 'linear-gradient(135deg,#FFFBEB,#FEF3C7)' : 'linear-gradient(135deg,#FEF2F2,#FEE2E2)';
+  const statusBorder = admin ? '#C4B5FD' : premium ? '#86EFAC' : trialActive ? '#FCD34D' : '#FCA5A5';
+
+  const featRows = features.map(f => {
+    const locked = !premium && !admin && !trialActive;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F1F5F9">
+      <span style="font-size:18px;width:26px;text-align:center;flex-shrink:0">${f.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700;color:${locked ? '#94A3B8' : '#1E293B'}">${f.label}</div>
+        <div style="font-size:11px;color:${locked ? '#CBD5E1' : '#64748B'}">${f.detail}</div>
       </div>
-      ${!premium && !admin ? `<button onclick="document.getElementById('account-modal').remove();openPayment()" style="width:100%;padding:12px;background:#1A237E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">🔓 Upgrade to Premium — ₹100</button>` : ''}
-      <button onclick="showPage('donate');document.getElementById('account-modal').remove()" style="width:100%;padding:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px">❤️ Support Us — Donate</button>
-      <button onclick="signOut()" style="width:100%;padding:10px;background:transparent;color:#DC2626;border:1px solid #FCA5A5;border-radius:10px;font-size:13px;cursor:pointer">Sign Out</button>
-      <button onclick="document.getElementById('account-modal').remove()" style="width:100%;padding:8px;background:transparent;color:#9CA3AF;border:none;font-size:12px;cursor:pointer;margin-top:4px">Close</button>
+      <span style="font-size:15px;flex-shrink:0">${locked ? '🔒' : '✅'}</span>
+    </div>`;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'account-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:flex-end;justify-content:center';
+
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding-bottom:24px">
+
+    <!-- Drag handle -->
+    <div style="display:flex;justify-content:center;padding:10px 0 0"><div style="width:36px;height:4px;background:#E2E8F0;border-radius:2px"></div></div>
+
+    <!-- Profile header -->
+    <div style="background:linear-gradient(135deg,#1A237E 0%,#5E35B1 100%);padding:22px 24px 20px;margin:12px 16px 0;border-radius:16px;text-align:center">
+      <div style="width:60px;height:60px;border-radius:50%;margin:0 auto 10px;border:3px solid rgba(255,255,255,0.5);background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden">
+        ${user.photo ? `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+      </div>
+      <div style="font-size:17px;font-weight:800;color:#fff">${user.name || 'User'}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${user.email || ''}</div>
     </div>
-  `;
-  document.body.appendChild(el);
+
+    <div style="padding:16px 16px 0">
+
+      <!-- Status card -->
+      <div style="background:${statusBg};border:2px solid ${statusBorder};border-radius:14px;padding:14px 16px;margin-bottom:14px;text-align:center">
+        <div style="font-size:13px;font-weight:800;color:${statusColor};letter-spacing:0.3px">
+          ${admin ? '🛡️ ADMIN ACCOUNT — FULL ACCESS' : premium ? `✅ PREMIUM ACTIVE — ${premiumDays} DAYS LEFT` : trialActive ? '⏳ FREE TRIAL ACTIVE' : '❌ TRIAL EXPIRED — UPGRADE TO CONTINUE'}
+        </div>
+        ${!premium && !admin && trialActive ? `
+          <div style="font-size:11px;color:#92400E;margin:6px 0 4px">Time remaining in your free trial:</div>
+          <div id="trial-timer" style="font-size:24px;font-weight:800;color:#1A237E;font-variant-numeric:tabular-nums;letter-spacing:1.5px">--</div>
+          <div style="font-size:10px;color:#92400E;margin-top:4px">⚠️ Everything locks when this hits zero</div>
+        ` : ''}
+        ${!premium && !admin && !trialActive ? `
+          <div style="font-size:12px;color:#991B1B;margin-top:6px">All features are locked. Upgrade now to keep studying!</div>
+        ` : ''}
+      </div>
+
+      <!-- Features section title -->
+      <div style="font-size:11px;font-weight:800;color:#94A3B8;letter-spacing:1px;margin-bottom:6px;text-transform:uppercase">
+        ${premium || admin ? '✨ Your Included Features' : trialActive ? '🎁 Trial Access — All Features Active' : '🔒 Locked — Upgrade to Unlock Everything'}
+      </div>
+
+      <!-- Features list -->
+      <div style="background:#F8FAFF;border-radius:12px;padding:4px 12px;margin-bottom:14px">
+        ${featRows}
+      </div>
+
+      <!-- Value proposition for non-premium -->
+      ${!premium && !admin ? `
+        <div style="background:linear-gradient(135deg,#1A237E,#5E35B1);border-radius:16px;padding:16px;margin-bottom:14px;text-align:center">
+          <div style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:0.5px;margin-bottom:6px">UNLOCK EVERYTHING FOR</div>
+          <div style="display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:36px;font-weight:900;color:#fff">₹100</span>
+            <span style="font-size:14px;color:rgba(255,255,255,0.7)">/6 months</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:14px">That's less than ₹17/month • Less than 1 chai ☕</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;text-align:left">
+            <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.9)">✅ No subscription</div>
+            <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.9)">✅ One-time payment</div>
+            <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.9)">✅ Instant activation</div>
+            <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.9)">✅ All 8 features</div>
+          </div>
+          <button onclick="document.getElementById('account-modal').remove();openPayment()"
+            style="width:100%;padding:15px;background:#fff;color:#1A237E;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.2)">
+            🔓 Get Premium — ₹100
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- Bottom actions -->
+      <button onclick="showPage('donate');document.getElementById('account-modal').remove()"
+        style="width:100%;padding:12px;background:#FFF7ED;color:#C2410C;border:1.5px solid #FED7AA;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px">
+        ❤️ Support Us — Donate
+      </button>
+      <button onclick="signOut()"
+        style="width:100%;padding:10px;background:transparent;color:#DC2626;border:1.5px solid #FCA5A5;border-radius:12px;font-size:13px;cursor:pointer;margin-bottom:4px">
+        Sign Out
+      </button>
+      <button onclick="document.getElementById('account-modal').remove()"
+        style="width:100%;padding:8px;background:transparent;color:#9CA3AF;border:none;font-size:12px;cursor:pointer">
+        Close
+      </button>
+    </div>
+  </div>`;
+
+  modal.addEventListener('click', e => { if (e.target === modal) { modal.remove(); stopTrialTimer(); } });
+  document.body.appendChild(modal);
+  if (!premium && !admin && trialActive) startTrialTimer(user.uid);
 }
+
 
 // ── SIGN OUT ──────────────────────────────────────────────────────────────────
 async function signOut() {
   try { if (firebaseAuth) await firebaseAuth.signOut(); } catch(e) {}
+  stopTrialTimer();
   localStorage.removeItem('mppsc_user');
   document.getElementById('account-modal')?.remove();
   document.getElementById('user-badge')?.remove();
@@ -364,16 +493,16 @@ async function signOut() {
 function showPaywall(msg) {
   if (document.getElementById('paywall-modal')) return;
   const user = getLocalUser();
-  if (!user || isPremium()) return; // admins and premium users never see paywall
+  if (!user || isPremium()) return;
   const el = document.createElement('div');
   el.id = 'paywall-modal';
-  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   el.innerHTML = `
     <div style="background:linear-gradient(135deg,#1A237E,#5E35B1);border-radius:20px;padding:40px 28px;max-width:380px;width:100%;text-align:center;color:#fff">
       <div style="font-size:48px;margin-bottom:12px">🔒</div>
       <div style="font-size:18px;font-weight:800;margin-bottom:8px">Trial Expired</div>
       <div style="font-size:14px;opacity:0.9;margin-bottom:8px">Unlock ${msg} with premium</div>
-      <div style="font-size:12px;opacity:0.75;margin-bottom:20px">You had 7 days free. Upgrade to continue!</div>
+      <div style="font-size:12px;opacity:0.75;margin-bottom:20px">Your 7-day free trial has ended</div>
       <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:16px;margin-bottom:24px">
         <div style="font-size:28px;font-weight:800;margin-bottom:4px">₹100</div>
         <div style="font-size:13px">6 months full access</div>
@@ -400,6 +529,7 @@ async function openPayment() {
     theme: { color: '#1A237E' },
     handler: function(response) {
       setPremium(user.uid, PREMIUM_MONTHS);
+      stopTrialTimer();
       document.getElementById('paywall-modal')?.remove();
       updateUserBadge();
       showToastSafe('🎉 Premium unlocked for 6 months!', '#15803D');
@@ -433,6 +563,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       updateReviewTabVisibility();
       if (!isPremium() && !isTrialActive(user.uid)) {
         setTimeout(() => showPaywall('full app access'), 1500);
+      } else if (!isPremium()) {
+        startTrialTimer(user.uid);
       }
     }
   }, 500);

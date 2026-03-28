@@ -112,6 +112,9 @@ function showPage(id, skipTestReset) {
   const pg = el('page-' + id);
   if (!pg) return;
   pg.classList.add('active');
+  // FIX: scroll to top on every page change (fixes donate blank space)
+  window.scrollTo(0, 0);
+  document.querySelector('.main') && (document.querySelector('.main').scrollTop = 0);
   document.querySelectorAll('.nav-item').forEach(n => {
     if ((n.getAttribute('onclick') || '').includes("'" + id + "'")) n.classList.add('active');
   });
