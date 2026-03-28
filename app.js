@@ -16,7 +16,9 @@ const PAGE_META = {
   pyq:{title:'PYQ Papers',sub:'MPPSC 2021–2024 — 600 questions + PDF download'},
   maps:{title:'Map Quiz',sub:'India states · MP divisions · MP districts'},
   progress:{title:'My Progress',sub:'Study heatmap & chapter-wise progress rings'},
-  review:{title:'Review Flags',sub:'Community-reported questions — admin panel'}
+  review:{title:'Review Flags',sub:'Community-reported questions — admin panel'},
+  weakareas:{title:'Weak Areas',sub:'Focus on what needs improvement'},
+  donate:{title:'Support Us ❤️',sub:'Help keep MP GK Portal free & growing'}
 };
 
 // ── STATE ──────────────────────────────────────
@@ -112,9 +114,10 @@ function showPage(id, skipTestReset) {
   const pg = el('page-' + id);
   if (!pg) return;
   pg.classList.add('active');
-  // FIX: scroll to top on every page change (fixes donate blank space)
+  // Scroll to top on every page switch
+  const main = document.querySelector('.main');
+  if (main) main.scrollTop = 0;
   window.scrollTo(0, 0);
-  document.querySelector('.main') && (document.querySelector('.main').scrollTop = 0);
   document.querySelectorAll('.nav-item').forEach(n => {
     if ((n.getAttribute('onclick') || '').includes("'" + id + "'")) n.classList.add('active');
   });
