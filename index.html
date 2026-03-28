@@ -377,34 +377,14 @@
     <div style="font-size:13px;opacity:.75;line-height:1.6">Built with love for MPPSC aspirants across Madhya Pradesh.<br>Your support keeps it free and growing!</div>
   </div>
 
-  <!-- Amount -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:14px">Choose Amount</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
-      <button onclick="dnSetAmt(11,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹11</button>
-      <button onclick="dnSetAmt(21,this)" class="dn-amt dn-active" style="padding:10px 4px;border:2px solid var(--navy);border-radius:10px;background:#EEF2FF;font-size:14px;font-weight:700;cursor:pointer;color:var(--navy);font-family:'DM Sans',sans-serif">₹21</button>
-      <button onclick="dnSetAmt(51,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹51</button>
-      <button onclick="dnSetAmt(101,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹101</button>
-    </div>
-    <input id="dn-amt-input" type="number" value="21" placeholder="Custom amount"
-      oninput="document.querySelectorAll('.dn-amt').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='#fff';b.style.color='var(--text)'})"
-      style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
-    <div style="font-size:12px;color:var(--muted);text-align:center">Every rupee helps us add more content 🙏</div>
-  </div>
-
   <!-- UPI -->
   <div class="card" style="margin-bottom:16px">
     <div class="sec-title" style="margin-bottom:14px">Pay via UPI</div>
     <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:8px">Send to UPI ID</div>
-    <div onclick="dnCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:16px">
+    <div onclick="dnCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:0">
       <div id="dn-upi-txt" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px">padhleyrr@upi</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">MP GK Portal — PadhleYrr</div>
       <div style="font-size:12px;color:var(--saff);margin-top:5px;font-weight:600">📋 Tap to copy</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button onclick="dnGPay()" style="width:100%;padding:13px;background:#1A73E8;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">G&nbsp; Pay with Google Pay</button>
-      <button onclick="dnPhonePe()" style="width:100%;padding:13px;background:#5F259F;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">📱 Pay with PhonePe</button>
-      <button onclick="dnPaytm()" style="width:100%;padding:13px;background:#00BAF2;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">💙 Pay with Paytm</button>
     </div>
   </div>
 
@@ -418,29 +398,6 @@
       <span style="font-size:10px">Replace with upi-qr.png</span>
     </div>
     <div style="font-size:12px;color:var(--muted);line-height:1.7">Open any UPI app → Scan → Enter amount → Pay<br>Works with GPay, PhonePe, Paytm, BHIM &amp; all UPI apps</div>
-  </div>
-
-  <!-- Impact -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:14px">Your donation helps us</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
-        <span style="font-size:20px;flex-shrink:0">📚</span>
-        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Add more questions</b> — 50+ new MCQs every month based on latest MPPSC pattern</div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
-        <span style="font-size:20px;flex-shrink:0">🔔</span>
-        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Build new features</b> — Daily current affairs, Hindi UI, offline mode &amp; more</div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
-        <span style="font-size:20px;flex-shrink:0">🆓</span>
-        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Keep it affordable</b> — Premium stays at ₹100 for rural students</div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
-        <span style="font-size:20px;flex-shrink:0">🏆</span>
-        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Server costs</b> — Keep the app fast and available 24/7 for all aspirants</div>
-      </div>
-    </div>
   </div>
 
   <div style="text-align:center;font-size:12px;color:var(--muted);line-height:1.8;padding:8px 0 20px">
