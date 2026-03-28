@@ -369,128 +369,106 @@
 </div>
 </div>
 <!-- ═══ DONATE PAGE ═══ -->
-<div class="page" id="page-donate" style="background:#F4F6FB;margin:-22px -24px;padding-bottom:20px">
-<div style="max-width:480px;margin:0 auto;padding:20px 16px 40px;font-family:'DM Sans',sans-serif">
+<div class="page" id="page-donate">
 
-  <div style="background:#1A237E;border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;color:#fff">
-    <div style="font-size:48px;margin-bottom:12px">❤️</div>
-    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px">Support MP GK Portal</div>
-    <div style="font-size:13px;opacity:.75;line-height:1.6">This app is built with love for MPPSC aspirants across Madhya Pradesh. Your support keeps it free and growing!</div>
+  <!-- Hero -->
+  <div style="background:var(--navy);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:20px;color:#fff">
+    <div style="font-size:44px;margin-bottom:10px">❤️</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Support MP GK Portal</div>
+    <div style="font-size:13px;opacity:.75;line-height:1.6">Built with love for MPPSC aspirants across Madhya Pradesh.<br>Your support keeps it free and growing!</div>
   </div>
 
-  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Choose Amount</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
-      <button onclick="donateSetAmount(11,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹11</button>
-      <button onclick="donateSetAmount(21,this)" style="padding:10px 4px;border:2px solid #1A237E;border-radius:10px;background:#EEF2FF;font-size:14px;font-weight:700;cursor:pointer;color:#1A237E">₹21</button>
-      <button onclick="donateSetAmount(51,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹51</button>
-      <button onclick="donateSetAmount(101,this)" style="padding:10px 4px;border:2px solid #E2E8F0;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#1E293B">₹101</button>
+  <!-- Amount -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec-title" style="margin-bottom:14px">Choose Amount</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+      <button onclick="dnSetAmt(11,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹11</button>
+      <button onclick="dnSetAmt(21,this)" class="dn-amt dn-active" style="padding:10px 4px;border:2px solid var(--navy);border-radius:10px;background:#EEF2FF;font-size:14px;font-weight:700;cursor:pointer;color:var(--navy);font-family:'DM Sans',sans-serif">₹21</button>
+      <button onclick="dnSetAmt(51,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹51</button>
+      <button onclick="dnSetAmt(101,this)" class="dn-amt" style="padding:10px 4px;border:2px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif">₹101</button>
     </div>
-    <input id="donate-amount-input" type="number" value="21" placeholder="Enter custom amount" oninput="donateClearBtns()"
-      style="width:100%;padding:12px 16px;border:2px solid #E2E8F0;border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:#1E293B;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:16px">
-    <div style="font-size:12px;color:#64748B;text-align:center">Every rupee helps us add more content 🙏</div>
+    <input id="dn-amt-input" type="number" value="21" placeholder="Custom amount"
+      oninput="document.querySelectorAll('.dn-amt').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='#fff';b.style.color='var(--text)'})"
+      style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-weight:600;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
+    <div style="font-size:12px;color:var(--muted);text-align:center">Every rupee helps us add more content 🙏</div>
   </div>
 
-  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Pay via UPI</div>
-    <div style="text-align:center">
-      <div style="font-size:13px;color:#64748B;margin-bottom:4px">Send to UPI ID</div>
-      <div onclick="donateCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;margin:12px 0;cursor:pointer">
-        <div id="donate-upi-display" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#1A237E;letter-spacing:.5px">padhleyrr@upi</div>
-        <div style="font-size:11px;color:#64748B;margin-top:4px">MP GK Portal — PadhleYrr</div>
-        <div style="font-size:12px;color:#FF6B00;margin-top:6px;font-weight:600">📋 Tap to copy</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
-        <button onclick="donateOpenGPay()" style="width:100%;padding:14px;background:#1A73E8;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">G Pay with Google Pay</button>
-        <button onclick="donateOpenPhonePe()" style="width:100%;padding:14px;background:#5F259F;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">📱 Pay with PhonePe</button>
-        <button onclick="donateOpenPaytm()" style="width:100%;padding:14px;background:#00BAF2;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">💙 Pay with Paytm</button>
-      </div>
+  <!-- UPI -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec-title" style="margin-bottom:14px">Pay via UPI</div>
+    <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:8px">Send to UPI ID</div>
+    <div onclick="dnCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:16px">
+      <div id="dn-upi-txt" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px">padhleyrr@upi</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">MP GK Portal — PadhleYrr</div>
+      <div style="font-size:12px;color:var(--saff);margin-top:5px;font-weight:600">📋 Tap to copy</div>
     </div>
-  </div>
-
-  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Scan QR Code</div>
-    <div style="text-align:center;padding:20px 0">
-      <!-- Replace div below with: <img src="upi-qr.png" style="width:180px;border-radius:12px"> -->
-      <div style="width:180px;height:180px;background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#64748B;font-size:12px;gap:8px">
-        <span style="font-size:32px">📱</span><span>Add your UPI QR image here</span><span style="font-size:10px">Replace with upi-qr.png</span>
-      </div>
-      <div style="font-size:12px;color:#64748B;margin-top:12px;line-height:1.6">Open any UPI app → Scan QR → Enter amount → Pay<br>Works with GPay, PhonePe, Paytm, BHIM &amp; all UPI apps</div>
-    </div>
-  </div>
-
-  <div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:20px;margin-bottom:16px">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;color:#1A237E">Your donation helps us</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+      <button onclick="dnGPay()" style="width:100%;padding:13px;background:#1A73E8;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">G&nbsp; Pay with Google Pay</button>
+      <button onclick="dnPhonePe()" style="width:100%;padding:13px;background:#5F259F;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">📱 Pay with PhonePe</button>
+      <button onclick="dnPaytm()" style="width:100%;padding:13px;background:#00BAF2;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">💙 Pay with Paytm</button>
+    </div>
+  </div>
+
+  <!-- QR -->
+  <div class="card" style="margin-bottom:16px;text-align:center">
+    <div class="sec-title" style="margin-bottom:14px;text-align:left">Scan QR Code</div>
+    <!-- Replace the div below with <img src="upi-qr.png" style="width:180px;border-radius:12px"> once you have the QR image -->
+    <div style="width:180px;height:180px;background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;margin:0 auto 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:12px;gap:6px">
+      <span style="font-size:30px">📱</span>
+      <span>Add UPI QR image here</span>
+      <span style="font-size:10px">Replace with upi-qr.png</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">Open any UPI app → Scan → Enter amount → Pay<br>Works with GPay, PhonePe, Paytm, BHIM &amp; all UPI apps</div>
+  </div>
+
+  <!-- Impact -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec-title" style="margin-bottom:14px">Your donation helps us</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
         <span style="font-size:20px;flex-shrink:0">📚</span>
-        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Add more questions</b> — We add 50+ new MCQs every month based on latest MPPSC pattern</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Add more questions</b> — 50+ new MCQs every month based on latest MPPSC pattern</div>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
         <span style="font-size:20px;flex-shrink:0">🔔</span>
-        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Build new features</b> — Daily current affairs, Hindi UI, offline mode &amp; more</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Build new features</b> — Daily current affairs, Hindi UI, offline mode &amp; more</div>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
         <span style="font-size:20px;flex-shrink:0">🆓</span>
-        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Keep it affordable</b> — Your support lets us keep premium at just ₹100 for rural students</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Keep it affordable</b> — Premium stays at ₹100 for rural students</div>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:#F8FAFF;border-radius:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:11px;background:var(--bg);border-radius:10px">
         <span style="font-size:20px;flex-shrink:0">🏆</span>
-        <div style="font-size:13px;line-height:1.5"><b style="color:#1A237E">Server costs</b> — Keep the app running fast and available 24/7 for all aspirants</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5"><b style="color:var(--navy)">Server costs</b> — Keep the app fast and available 24/7 for all aspirants</div>
       </div>
     </div>
   </div>
 
-  <div style="text-align:center;font-size:12px;color:#64748B;line-height:1.7;padding:16px 0">
+  <div style="text-align:center;font-size:12px;color:var(--muted);line-height:1.8;padding:8px 0 20px">
     🙏 Thank you for supporting MPPSC aspirants across Madhya Pradesh!<br>
     Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP
   </div>
 
 </div>
-</div>
 
 <script>
 (function(){
-  const DONATE_UPI = 'padhleyrr@upi';
-  window.donateSetAmount = function(val, btn) {
-    document.getElementById('donate-amount-input').value = val;
-    document.querySelectorAll('#page-donate button[onclick^="donateSetAmount"]').forEach(b => {
-      b.style.borderColor='#E2E8F0'; b.style.background='#fff'; b.style.color='#1E293B';
-    });
-    btn.style.borderColor='#1A237E'; btn.style.background='#EEF2FF'; btn.style.color='#1A237E';
+  var UPI='padhleyrr@upi';
+  window.dnSetAmt=function(v,btn){
+    document.getElementById('dn-amt-input').value=v;
+    document.querySelectorAll('.dn-amt').forEach(function(b){b.style.borderColor='var(--border)';b.style.background='#fff';b.style.color='var(--text)';});
+    btn.style.borderColor='var(--navy)';btn.style.background='#EEF2FF';btn.style.color='var(--navy)';
   };
-  window.donateClearBtns = function() {
-    document.querySelectorAll('#page-donate button[onclick^="donateSetAmount"]').forEach(b => {
-      b.style.borderColor='#E2E8F0'; b.style.background='#fff'; b.style.color='#1E293B';
-    });
+  function getAmt(){return parseInt(document.getElementById('dn-amt-input').value)||21;}
+  window.dnCopyUPI=function(){
+    var el=document.getElementById('dn-upi-txt');
+    var orig=el.textContent;
+    if(navigator.clipboard){navigator.clipboard.writeText(UPI).then(function(){el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);});}
+    else{var t=document.createElement('textarea');t.value=UPI;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);}
   };
-  window.donateCopyUPI = function() {
-    const el = document.getElementById('donate-upi-display');
-    const orig = el.textContent;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(DONATE_UPI).then(() => { el.textContent='✅ Copied!'; setTimeout(()=>{ el.textContent=orig; },2000); });
-    } else {
-      const ta=document.createElement('textarea'); ta.value=DONATE_UPI;
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-      el.textContent='✅ Copied!'; setTimeout(()=>{ el.textContent=orig; },2000);
-    }
-  };
-  function getAmt(){ return parseInt(document.getElementById('donate-amount-input').value)||21; }
-  window.donateOpenGPay = function(){
-    const a=getAmt();
-    window.location.href=`tez://upi/pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
-    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
-  };
-  window.donateOpenPhonePe = function(){
-    const a=getAmt();
-    window.location.href=`phonepe://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
-    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
-  };
-  window.donateOpenPaytm = function(){
-    const a=getAmt();
-    window.location.href=`paytmmp://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR&tn=Donation+to+MPPSC+App`;
-    setTimeout(()=>{ window.location.href=`upi://pay?pa=${DONATE_UPI}&pn=MPGKPortal&am=${a}&cu=INR`; },1500);
-  };
+  window.dnGPay=function(){var a=getAmt();window.location.href='tez://upi/pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
+  window.dnPhonePe=function(){var a=getAmt();window.location.href='phonepe://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
+  window.dnPaytm=function(){var a=getAmt();window.location.href='paytmmp://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
 })();
 </script>
 
