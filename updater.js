@@ -4,7 +4,7 @@
 //  Permissions: asked once on first app open
 // ═══════════════════════════════════════════════
 
-const APP_CURRENT_VERSION = "1.0.0"; // ← Change this to NEW version each release
+const APP_CURRENT_VERSION = "1.0.2"; // ← Change this to NEW version each release
 const VERSION_URL = "https://raw.githubusercontent.com/PadhleYrr/MPPSC/main/version.json";
 
 // ── PERMISSIONS (asked once on first open) ──────
