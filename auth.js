@@ -154,11 +154,16 @@ async function _handleAuth() {
       startTrialIfNew(res.user.uid);
     }
   } catch(e) {
-    let msg = 'Something went wrong. Try again.';
-    if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(e.code)) msg = 'Wrong email or password.';
+    console.error('Firebase auth error:', e.code, e.message);
+    let msg = 'Something went wrong. Try again. (' + (e.code || 'unknown') + ')';
+    if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(e.code)) msg = 'Wrong email or password.';
     else if (e.code === 'auth/email-already-in-use') msg = 'Email already registered. Login instead.';
     else if (e.code === 'auth/invalid-email') msg = 'Invalid email address.';
     else if (e.code === 'auth/too-many-requests') msg = 'Too many attempts. Try later.';
+    else if (e.code === 'auth/operation-not-allowed') msg = 'Email/Password login not enabled. Enable it in Firebase Console → Authentication → Sign-in Providers.';
+    else if (e.code === 'auth/network-request-failed') msg = 'Network error. Check your internet connection.';
+    else if (e.code === 'auth/weak-password') msg = 'Password too weak. Use at least 6 characters.';
+    else if (e.code === 'auth/configuration-not-found') msg = 'Firebase config error. Check your API key and project ID.';
     errEl.textContent = msg;
     btn.disabled = false;
     btn.textContent = _currentTab === 'login' ? 'Login' : 'Create Account';
