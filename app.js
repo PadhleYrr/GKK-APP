@@ -108,7 +108,16 @@ function closeSidebarMobile() {
     if (sb) sb.classList.remove('open');
   }
 }
+// ── PAGE NAVIGATION STACK (for Android back button) ──────
+let _pageStack = ['dashboard'];  // stack of page IDs
+let _currentPageId = 'dashboard';
+
 function showPage(id, skipTestReset) {
+  // Push to stack only if navigating to a different page
+  if (id !== _currentPageId) {
+    _pageStack.push(id);
+    _currentPageId = id;
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pg = el('page-' + id);
@@ -869,4 +878,145 @@ window.addEventListener('DOMContentLoaded', () => {
       b.textContent = Q.length;
     }
   });
+});
+
+
+// ── MAP FULLSCREEN OVERLAY ────────────────────────────────
+function openMapFullscreen() {
+  if (document.getElementById('map-fullscreen-overlay')) return;
+  const el = document.createElement('div');
+  el.id = 'map-fullscreen-overlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#000;display:flex;flex-direction:column';
+  el.innerHTML = `
+    <div style="background:#1A237E;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="color:#fff;font-weight:700;font-size:14px">🗺️ Map Quiz</span>
+      <button onclick="document.getElementById('map-fullscreen-overlay').remove()"
+        style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">✕ Close</button>
+    </div>
+    <iframe src="maps.html" style="flex:1;border:none;width:100%;height:100%"></iframe>
+  `;
+  document.body.appendChild(el);
+}
+
+// ══════════════════════════════════════════════
+//  ANDROID BACK BUTTON SYSTEM
+// ══════════════════════════════════════════════
+
+function _handleBackButton() {
+  // Priority 1: close any open modals/overlays
+  const overlays = [
+    'admin-panel', 'paywall-modal', 'account-modal',
+    'flag-modal', 'map-fullscreen-overlay'
+  ];
+  for (const id of overlays) {
+    const el = document.getElementById(id);
+    if (el) { el.remove(); return; }
+  }
+
+  // Priority 2: if in a quiz mid-session → show quit confirmation
+  const testQScr   = document.getElementById('test-q-scr');
+  const timedWrap  = document.getElementById('timed-test-wrap');
+  if (testQScr && testQScr.style.display !== 'none') {
+    _confirmQuitQuiz();
+    return;
+  }
+  // Timed quiz — already has "End Test" button but intercept back too
+  if (timedWrap && timedWrap.style.display !== 'none') {
+    if (typeof endTimedTest === 'function') endTimedTest();
+    return;
+  }
+
+  // Priority 3: if on quiz result screen → go back to test home
+  const resultScr = document.getElementById('test-result-scr');
+  if (resultScr && resultScr.style.display !== 'none') {
+    resetTestHome();
+    showPage('test', true);
+    return;
+  }
+
+  // Priority 4: navigate to previous page in stack
+  if (_pageStack.length > 1) {
+    _pageStack.pop(); // remove current
+    const prev = _pageStack[_pageStack.length - 1];
+    _currentPageId = prev;
+    // Don't push to stack again — this is a back navigation
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const pg = document.getElementById('page-' + prev);
+    if (pg) pg.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if ((n.getAttribute('onclick')||'').includes("'" + prev + "'")) n.classList.add('active');
+    });
+    const meta = PAGE_META[prev] || { title: prev, sub: '' };
+    const pgTitle = document.getElementById('pg-title');
+    const pgSub   = document.getElementById('pg-sub');
+    if (pgTitle) pgTitle.textContent = meta.title;
+    if (pgSub)   pgSub.textContent   = meta.sub;
+    if (prev === 'dashboard') renderDashboard();
+    return;
+  }
+
+  // Priority 5: already on root page — show exit confirmation
+  _confirmExitApp();
+}
+
+function _confirmQuitQuiz() {
+  if (document.getElementById('quit-quiz-confirm')) return;
+  const el = document.createElement('div');
+  el.id = 'quit-quiz-confirm';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999998;display:flex;align-items:center;justify-content:center;padding:30px';
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:320px;width:100%;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">🚪</div>
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#1E293B;margin-bottom:8px">Quit Quiz?</div>
+      <div style="font-size:13px;color:#64748B;margin-bottom:22px">Your progress will be lost. Are you sure?</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('quit-quiz-confirm').remove()"
+          style="flex:1;padding:12px;background:#F1F5F9;color:#374151;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer">Keep Going</button>
+        <button onclick="document.getElementById('quit-quiz-confirm').remove();resetTestHome();showPage('test',true);"
+          style="flex:1;padding:12px;background:#DC2626;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer">Quit</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+}
+
+let _exitConfirmTimeout = null;
+function _confirmExitApp() {
+  // Show toast-style "Press back again to exit" — standard Android pattern
+  if (_exitConfirmTimeout) {
+    // Second press within 2s → actually exit
+    clearTimeout(_exitConfirmTimeout);
+    _exitConfirmTimeout = null;
+    if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) {
+      Capacitor.Plugins.App.exitApp();
+    }
+    return;
+  }
+  showToast('Press back again to exit', '#374151');
+  _exitConfirmTimeout = setTimeout(() => { _exitConfirmTimeout = null; }, 2000);
+}
+
+// Wire to Capacitor App plugin back button event
+function _initBackButton() {
+  try {
+    if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) {
+      Capacitor.Plugins.App.addListener('backButton', () => {
+        _handleBackButton();
+      });
+    }
+  } catch(e) { console.warn('Back button init failed:', e); }
+}
+
+// Also handle browser popstate for web testing
+window.addEventListener('popstate', (e) => {
+  e.preventDefault();
+  _handleBackButton();
+});
+
+// Call on load
+window.addEventListener('DOMContentLoaded', () => {
+  // Push initial history state so popstate fires on back
+  history.pushState({ page: 'dashboard' }, '');
+  setTimeout(_initBackButton, 1000);
 });

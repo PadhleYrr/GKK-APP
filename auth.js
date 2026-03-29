@@ -523,8 +523,6 @@ function showAdminPanel() {
   el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999999;display:flex;align-items:flex-end;justify-content:center;padding:0';
   el.innerHTML = `
     <div id="admin-sheet" style="background:#F8FAFF;border-radius:24px 24px 0 0;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">
-
-      <!-- Header -->
       <div style="background:linear-gradient(135deg,#3730A3,#6D28D9);border-radius:24px 24px 0 0;padding:20px 24px 0;color:#fff">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div>
@@ -534,24 +532,21 @@ function showAdminPanel() {
           <button onclick="document.getElementById('admin-panel').remove()"
             style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px">✕</button>
         </div>
-        <!-- Tabs -->
         <div style="display:flex;gap:4px;background:rgba(0,0,0,.2);border-radius:12px;padding:4px">
-          <button id="atab-user" onclick="adminSwitchTab('user')"
-            style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:#3730A3;font-family:'DM Sans',sans-serif">👤 User</button>
-          <button id="atab-stats" onclick="adminSwitchTab('stats')"
-            style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">📊 Stats</button>
+          <button id="atab-user"     onclick="adminSwitchTab('user')"     style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#3730A3;font-family:'DM Sans',sans-serif">👤 User</button>
+          <button id="atab-stats"    onclick="adminSwitchTab('stats')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">📊 Stats</button>
+          <button id="atab-tools"    onclick="adminSwitchTab('tools')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">🛠 Tools</button>
+          <button id="atab-settings" onclick="adminSwitchTab('settings')" style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">⚙️ App</button>
         </div>
         <div style="height:16px"></div>
       </div>
 
-      <!-- Tab: User Management -->
+      <!-- User Tab -->
       <div id="atab-content-user" style="padding:16px">
-
-        <!-- Search card -->
         <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
           <div style="font-size:12px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔍 User Lookup</div>
           <div style="display:flex;gap:8px">
-            <input id="admin-email-input" type="email" placeholder="email@example.com"
+            <input id="admin-email-input" type="text" placeholder="Email or name…"
               onkeydown="if(event.key==='Enter')adminLookupUser()"
               style="flex:1;padding:10px 12px;border:2px solid #E2E8F0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
             <button onclick="adminLookupUser()"
@@ -559,8 +554,6 @@ function showAdminPanel() {
           </div>
           <div id="admin-user-info" style="margin-top:10px;display:none"></div>
         </div>
-
-        <!-- User profile card (hidden until lookup) -->
         <div id="admin-profile-card" style="display:none;background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
           <div id="admin-profile-header" style="background:linear-gradient(135deg,#3730A3,#6D28D9);padding:16px 16px 14px;color:#fff">
             <div style="display:flex;align-items:center;gap:12px">
@@ -574,11 +567,7 @@ function showAdminPanel() {
           </div>
           <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="admin-profile-stats"></div>
         </div>
-
-        <!-- Actions (hidden until lookup) -->
         <div id="admin-actions" style="display:none">
-
-          <!-- Premium -->
           <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
             <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">💎 Premium Access</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
@@ -592,8 +581,6 @@ function showAdminPanel() {
               <button onclick="adminAction('revokePremium')" style="padding:9px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🚫 Revoke</button>
             </div>
           </div>
-
-          <!-- Trial -->
           <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
             <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">⏳ Trial Control</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px">
@@ -603,30 +590,69 @@ function showAdminPanel() {
             </div>
             <button onclick="adminAction('resetTrial')" style="width:100%;padding:9px;background:#F0F4FF;color:#3730A3;border:1.5px solid #A5B4FC;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">↺ Reset to Fresh 7-Day Trial</button>
           </div>
-
-          <!-- Account -->
           <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
             <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔧 Account Actions</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-              <button onclick="adminAction('addNote')"     style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📝 Add Note</button>
-              <button onclick="adminAction('copyUID')"     style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📋 Copy UID</button>
-              <button onclick="adminAction('banUser')"     style="padding:9px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🚫 Ban User</button>
-              <button onclick="adminAction('unbanUser')"   style="padding:9px;background:#F0FDF4;color:#166534;border:1.5px solid #86EFAC;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✅ Unban</button>
+              <button onclick="adminAction('addNote')"   style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📝 Add Note</button>
+              <button onclick="adminAction('copyUID')"   style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📋 Copy UID</button>
+              <button onclick="adminAction('banUser')"   style="padding:9px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🚫 Ban User</button>
+              <button onclick="adminAction('unbanUser')" style="padding:9px;background:#F0FDF4;color:#166534;border:1.5px solid #86EFAC;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✅ Unban</button>
             </div>
           </div>
-
-          <!-- Result feedback -->
           <div id="admin-action-result" style="font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;display:none;margin-bottom:8px"></div>
         </div>
-
       </div>
 
-      <!-- Tab: Stats -->
+      <!-- Stats Tab -->
       <div id="atab-content-stats" style="padding:16px;display:none">
         <div id="admin-stats-loading" style="text-align:center;padding:40px 0;color:#64748B;font-size:13px">Loading stats…</div>
         <div id="admin-stats-content" style="display:none"></div>
       </div>
 
+      <!-- Tools Tab -->
+      <div id="atab-content-tools" style="padding:16px;display:none">
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🎟 Coupon Codes</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="coupon-code-input" placeholder="Code e.g. DIWALI50" style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-transform:uppercase">
+            <input id="coupon-days-input" type="number" placeholder="Days" min="1" max="365" style="width:70px;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+          </div>
+          <button onclick="adminCreateCoupon()" style="width:100%;padding:9px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px">+ Create Coupon</button>
+          <div id="coupon-list" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#0891B2;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔗 Referral Tracking</div>
+          <div id="referral-stats" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">💰 Revenue Tracker</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="rev-amount" type="number" placeholder="Amount ₹" min="1" style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+            <input id="rev-note" placeholder="Note" style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+          </div>
+          <button onclick="adminAddRevenue()" style="width:100%;padding:9px;background:#059669;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px">+ Log Payment</button>
+          <div id="revenue-summary" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">📬 Feedback Inbox</div>
+          <div id="feedback-inbox" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🚩 Flagged Questions</div>
+          <div id="flagged-questions" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:11px;font-weight:700;color:#3730A3;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🏆 Quiz Leaderboard</div>
+          <div id="quiz-leaderboard" style="font-size:12px;color:#64748B">Loading…</div>
+        </div>
+        <div style="height:8px"></div>
+      </div>
+
+      <!-- App Settings Tab -->
+      <div id="atab-content-settings" style="padding:16px;display:none">
+        <div id="settings-loading" style="text-align:center;padding:40px;color:#64748B;font-size:13px">Loading…</div>
+        <div id="settings-content" style="display:none"></div>
+      </div>
     </div>
   `;
   document.body.appendChild(el);
@@ -636,7 +662,7 @@ function showAdminPanel() {
 
 function adminSwitchTab(tab) {
   _adminTab = tab;
-  ['user','stats'].forEach(t => {
+  ['user','stats','tools','settings'].forEach(t => {
     const btn  = document.getElementById('atab-' + t);
     const cont = document.getElementById('atab-content-' + t);
     if (!btn || !cont) return;
@@ -645,7 +671,9 @@ function adminSwitchTab(tab) {
     btn.style.color       = active ? '#3730A3' : 'rgba(255,255,255,.7)';
     cont.style.display    = active ? 'block' : 'none';
   });
-  if (tab === 'stats') adminLoadStats();
+  if (tab === 'stats')    adminLoadStats();
+  if (tab === 'settings') adminLoadSettings();
+  if (tab === 'tools')    _loadToolsData();
 }
 
 let _adminTargetUid   = null;
@@ -790,65 +818,8 @@ async function adminAction(action) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
-//  ADMIN — TABS: stats | tools | content | settings
-// ══════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────────────────
-// Patch showAdminPanel to add 4 tabs instead of 2
-// We monkey-patch the tab row HTML after panel is created
-// ─────────────────────────────────────────────────────────
-const _origShowAdminPanel = showAdminPanel;
-// Override tab HTML + add 2 new tab content divs
-function showAdminPanel() {
-  _origShowAdminPanel();
-  // Replace 2-tab row with 4-tab row
-  const tabRow = document.querySelector('#admin-panel [id^="atab-user"]')?.parentElement;
-  if (tabRow) {
-    tabRow.innerHTML = `
-      <button id="atab-user"     onclick="adminSwitchTab('user')"     style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#3730A3;font-family:'DM Sans',sans-serif">👤 User</button>
-      <button id="atab-stats"    onclick="adminSwitchTab('stats')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">📊 Stats</button>
-      <button id="atab-tools"    onclick="adminSwitchTab('tools')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">🛠 Tools</button>
-      <button id="atab-settings" onclick="adminSwitchTab('settings')" style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">⚙️ App</button>
-    `;
-  }
-  // Inject tools & settings tab panes
-  const sheet = document.getElementById('admin-sheet');
-  if (sheet) {
-    if (!document.getElementById('atab-content-tools')) {
-      const toolsDiv = document.createElement('div');
-      toolsDiv.id = 'atab-content-tools';
-      toolsDiv.style.cssText = 'padding:16px;display:none';
-      toolsDiv.innerHTML = _toolsTabHTML();
-      sheet.appendChild(toolsDiv);
-    }
-    if (!document.getElementById('atab-content-settings')) {
-      const settingsDiv = document.createElement('div');
-      settingsDiv.id = 'atab-content-settings';
-      settingsDiv.style.cssText = 'padding:16px;display:none';
-      settingsDiv.innerHTML = '<div id="settings-loading" style="text-align:center;padding:40px;color:#64748B;font-size:13px">Loading…</div><div id="settings-content" style="display:none"></div>';
-      sheet.appendChild(settingsDiv);
-    }
-  }
-  adminSwitchTab('user');
-}
 
-// Extend tab switcher to handle 4 tabs
-const _origAdminSwitchTab = adminSwitchTab;
-function adminSwitchTab(tab) {
-  _adminTab = tab;
-  ['user','stats','tools','settings'].forEach(t => {
-    const btn  = document.getElementById('atab-' + t);
-    const cont = document.getElementById('atab-content-' + t);
-    if (!btn || !cont) return;
-    const active = t === tab;
-    btn.style.background = active ? '#fff' : 'transparent';
-    btn.style.color       = active ? '#3730A3' : 'rgba(255,255,255,.7)';
-    cont.style.display    = active ? 'block' : 'none';
-  });
-  if (tab === 'stats')    adminLoadStats();
-  if (tab === 'settings') adminLoadSettings();
-}
 
 // ── TOOLS TAB HTML ────────────────────────────────────────
 function _toolsTabHTML() {
