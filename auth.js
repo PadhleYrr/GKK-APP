@@ -57,11 +57,14 @@ function initFirebase() {
 async function _checkAdmin(email) {
   _isAdmin = false;
   try {
-    if (typeof firebase.firestore !== 'function') return;
     const snap = await firebase.firestore().collection('config').doc('admins').get();
-    if (snap.exists) _isAdmin = (snap.data().emails || []).includes(email);
-  } catch(e) {}
+    if (snap.exists) {
+      const adminEmails = snap.data().emails || [];
+      _isAdmin = adminEmails.map(e => e.trim().toLowerCase()).includes((email||'').trim().toLowerCase());
+    }
+  } catch(e) { console.warn('Admin check failed:', e); }
   _setReviewNavVisible(_isAdmin);
+  updateUserBadge(); // refresh badge now that admin status is known
 }
 
 function _setReviewNavVisible(show) {
