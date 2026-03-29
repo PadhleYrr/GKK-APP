@@ -42,6 +42,7 @@ function initFirebase() {
     if (user) {
       currentUser = user;
       saveUserLocally(user);
+      await _loadAndInitUser(user.uid);
       await _checkAdmin(user.email);
       onUserLoggedIn(user);
     } else {
@@ -151,7 +152,7 @@ async function _handleAuth() {
     } else {
       const res = await firebaseAuth.createUserWithEmailAndPassword(email, pass);
       await res.user.updateProfile({ displayName: name });
-      startTrialIfNew(res.user.uid);
+      // trial started automatically by _loadAndInitUser via onAuthStateChanged
     }
   } catch(e) {
     console.error('Firebase auth error:', e.code, e.message);
@@ -190,38 +191,64 @@ function saveUserLocally(user) {
 function getLocalUser() { try { return JSON.parse(localStorage.getItem('mppsc_user')); } catch { return null; } }
 function removeLoginScreen() { document.getElementById('login-screen')?.remove(); }
 
-// ── TRIAL SYSTEM ──────────────────────────────────────────
-function startTrialIfNew(uid) {
-  if (!localStorage.getItem('trial_start_' + uid)) {
-    localStorage.setItem('trial_start_' + uid, Date.now().toString());
-    showToastSafe('🎁 7-day free trial started!', '#15803D');
+// ── FIRESTORE USER RECORD ────────────────────────────────
+// All trial/premium lives in Firestore: users/{uid}
+// trialStart (ms) — set once, never reset by user
+// premiumExpiry (ms) — admin can set/revoke
+
+let _userRecord = { trialStart: 0, premiumExpiry: 0 };
+
+async function _loadAndInitUser(uid) {
+  try {
+    const ref = firebase.firestore().collection('users').doc(uid);
+    const snap = await ref.get();
+    if (snap.exists) {
+      const d = snap.data();
+      _userRecord = { trialStart: d.trialStart||0, premiumExpiry: d.premiumExpiry||0 };
+      // Save email for admin lookup
+      if (!d.email) await ref.set({ email: firebase.auth().currentUser.email }, { merge: true });
+    } else {
+      // First ever login — create record + start trial
+      const now = Date.now();
+      _userRecord = { trialStart: now, premiumExpiry: 0 };
+      await ref.set({ trialStart: now, premiumExpiry: 0, email: firebase.auth().currentUser.email });
+      showToastSafe('🎁 7-day free trial started!', '#15803D');
+    }
+  } catch(e) {
+    console.warn('Firestore error:', e);
+    // Fallback to localStorage if offline
+    const cached = localStorage.getItem('userRecord_' + uid);
+    if (cached) _userRecord = JSON.parse(cached);
+    else _userRecord = { trialStart: Date.now(), premiumExpiry: 0 };
   }
+  localStorage.setItem('userRecord_' + uid, JSON.stringify(_userRecord));
 }
-function getTrialMsLeft(uid) {
-  const start = parseInt(localStorage.getItem('trial_start_' + uid) || '0');
-  return start ? Math.max(0, start + 7 * 86400000 - Date.now()) : 0;
+
+// ── TRIAL SYSTEM ──────────────────────────────────────────
+function getTrialMsLeft() {
+  const start = _userRecord.trialStart;
+  if (!start) return 0;
+  return Math.max(0, start + 7 * 86400000 - Date.now());
 }
-function getTrialDaysLeft(uid) { return Math.ceil(getTrialMsLeft(uid) / 86400000); }
-function isTrialActive(uid) { return getTrialMsLeft(uid) > 0; }
+function getTrialDaysLeft()  { return Math.ceil(getTrialMsLeft() / 86400000); }
+function isTrialActive()     { return getTrialMsLeft() > 0; }
 
 // ── PREMIUM SYSTEM ────────────────────────────────────────
-function isPremium() {
-  const user = getLocalUser(); if (!user) return false;
-  return parseInt(localStorage.getItem('premium_expiry_' + user.uid) || '0') > Date.now();
-}
-function setPremium(uid, months) {
-  localStorage.setItem('premium_expiry_' + uid, (Date.now() + months * 30 * 86400000).toString());
-}
+function isPremium() { return (_userRecord.premiumExpiry||0) > Date.now(); }
 function getPremiumDaysLeft() {
-  const user = getLocalUser(); if (!user) return 0;
-  const expiry = parseInt(localStorage.getItem('premium_expiry_' + user.uid) || '0');
-  return Math.max(0, Math.ceil((expiry - Date.now()) / 86400000));
+  return Math.max(0, Math.ceil((_userRecord.premiumExpiry - Date.now()) / 86400000));
+}
+async function setPremium(uid, months) {
+  const expiry = Date.now() + months * 30 * 86400000;
+  _userRecord.premiumExpiry = expiry;
+  localStorage.setItem('userRecord_' + uid, JSON.stringify(_userRecord));
+  try { await firebase.firestore().collection('users').doc(uid).set({ premiumExpiry: expiry }, { merge: true }); } catch(e) {}
 }
 
 // ── ACCESS CHECK ──────────────────────────────────────────
 function hasAccess() {
-  const user = getLocalUser(); if (!user) return false;
-  return isPremium() || _isAdmin || isTrialActive(user.uid);
+  if (!getLocalUser()) return false;
+  return isPremium() || _isAdmin || isTrialActive();
 }
 function checkAccessOrShowPaywall(featureName) {
   if (hasAccess()) return true; showPaywall(featureName); return false;
@@ -293,12 +320,13 @@ function openPayment() {
 // ── ON USER LOGGED IN ─────────────────────────────────────
 function onUserLoggedIn(user) {
   removeLoginScreen();
-  const u = getLocalUser() || { uid: user.uid };
-  startTrialIfNew(u.uid);
   updateUserBadge();
-  const daysLeft = getTrialDaysLeft(u.uid);
+  const daysLeft = getTrialDaysLeft();
   if (!isPremium() && !_isAdmin && daysLeft > 0 && daysLeft <= 2) {
     setTimeout(() => showToastSafe(`⚠️ Trial ends in ${daysLeft} day${daysLeft > 1 ? 's' : ''}!`, '#D97706'), 3000);
+  }
+  if (!isPremium() && !_isAdmin && !isTrialActive()) {
+    setTimeout(() => showPaywall('full app access'), 1500);
   }
 }
 
@@ -313,7 +341,7 @@ function updateUserBadge() {
     badge.onclick = showAccountModal;
     document.querySelector('.topbar-right')?.prepend(badge);
   }
-  const premium = isPremium(); const daysLeft = getTrialDaysLeft(user.uid);
+  const premium = isPremium(); const daysLeft = getTrialDaysLeft();
   badge.innerHTML = `
     ${user.photo ? `<img src="${user.photo}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">` : '👤'}
     <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(user.name||'User').split(' ')[0]}</span>
@@ -331,7 +359,7 @@ function showAccountModal() {
   const user = getLocalUser(); if (!user) return;
 
   const premium = isPremium();
-  const trialMs = getTrialMsLeft(user.uid);
+  const trialMs = getTrialMsLeft();
   const trialActive = trialMs > 0;
   let state = 'expired';
   if (_isAdmin) state = 'admin';
@@ -383,8 +411,8 @@ function showAccountModal() {
     </button>` : '';
 
   const adminBtn = _isAdmin ? `
-    <button onclick="window.open('admin.html','_blank');document.getElementById('account-modal').remove()"
-      style="width:100%;padding:10px;background:#EEF2FF;color:#1A237E;border:1px solid #C7D7FD;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:'DM Sans',sans-serif">
+    <button onclick="document.getElementById('account-modal').remove();showAdminPanel()"
+      style="width:100%;padding:10px;background:#EEF2FF;color:#1A237E;border:1px solid #C7D7FD;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:'DM Sans\'sans-serif">
       🔧 Admin Panel
     </button>` : '';
 
@@ -425,7 +453,7 @@ function showAccountModal() {
 
   if (trialActive) {
     function _tick() {
-      const ms = getTrialMsLeft(user.uid);
+      const ms = getTrialMsLeft();
       const t = document.getElementById('modal-timer');
       if (!t) { clearInterval(_timerInterval); return; }
       if (ms <= 0) { t.textContent = 'EXPIRED'; clearInterval(_timerInterval); return; }
@@ -438,11 +466,148 @@ function showAccountModal() {
   }
 }
 
+
+// ── ADMIN PANEL ───────────────────────────────────────────
+function showAdminPanel() {
+  document.getElementById('account-modal')?.remove();
+  document.getElementById('admin-panel')?.remove();
+
+  const el = document.createElement('div');
+  el.id = 'admin-panel';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999999;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:24px 24px 0 0;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">
+      <div style="background:linear-gradient(135deg,#4527A0,#6A1B9A);border-radius:24px 24px 0 0;padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">🔧 Admin Panel</div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px">Manage users, trial & premium</div>
+        </div>
+        <button onclick="document.getElementById('admin-panel').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
+      </div>
+      <div style="padding:20px">
+
+        <div style="background:#F8FAFF;border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#1A237E;margin-bottom:10px">🔍 Lookup User by Email</div>
+          <div style="display:flex;gap:8px">
+            <input id="admin-email-input" type="email" placeholder="user@email.com"
+              style="flex:1;padding:10px 12px;border:2px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
+            <button onclick="adminLookupUser()" style="padding:10px 16px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Look up</button>
+          </div>
+          <div id="admin-user-info" style="margin-top:12px;display:none"></div>
+        </div>
+
+        <div id="admin-actions" style="display:none">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#1A237E;margin-bottom:10px">⚡ Actions for <span id="admin-target-email" style="color:#5E35B1"></span></div>
+
+          <div style="background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:8px">💎 Premium</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="adminAction('premium1')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+1 Month</button>
+              <button onclick="adminAction('premium3')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+3 Months</button>
+              <button onclick="adminAction('premium6')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+6 Months</button>
+              <button onclick="adminAction('premium12')" style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+12 Months</button>
+              <button onclick="adminAction('revokePremium')" style="padding:8px 12px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Revoke</button>
+            </div>
+          </div>
+
+          <div style="background:#FFFBEB;border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:700;color:#D97706;margin-bottom:8px">⏳ Trial</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="adminAction('trial3')"    style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+3 Days</button>
+              <button onclick="adminAction('trial7')"    style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+7 Days</button>
+              <button onclick="adminAction('trial30')"   style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+30 Days</button>
+              <button onclick="adminAction('resetTrial')" style="padding:8px 12px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Reset to 7d</button>
+            </div>
+          </div>
+
+          <div id="admin-action-result" style="font-size:13px;font-weight:600;padding:10px;border-radius:8px;display:none;margin-top:4px"></div>
+        </div>
+
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+}
+
+let _adminTargetUid   = null;
+let _adminTargetEmail = null;
+
+async function adminLookupUser() {
+  const email = document.getElementById('admin-email-input').value.trim();
+  if (!email) return;
+  const infoEl    = document.getElementById('admin-user-info');
+  const actionsEl = document.getElementById('admin-actions');
+  infoEl.style.display = 'block';
+  infoEl.innerHTML = '<div style="font-size:13px;color:#64748B">Looking up…</div>';
+  actionsEl.style.display = 'none';
+  _adminTargetUid = null;
+
+  try {
+    const snap = await firebase.firestore().collection('users').where('email','==',email).limit(1).get();
+    if (snap.empty) {
+      infoEl.innerHTML = '<div style="font-size:13px;color:#DC2626">❌ No user found with that email.</div>';
+      return;
+    }
+    const doc  = snap.docs[0];
+    const data = doc.data();
+    _adminTargetUid   = doc.id;
+    _adminTargetEmail = email;
+
+    const now = Date.now();
+    const trialDays   = data.trialStart   ? Math.max(0, Math.ceil((data.trialStart + 7*86400000 - now)/86400000)) : 0;
+    const premiumDays = (data.premiumExpiry||0) > now ? Math.ceil((data.premiumExpiry - now)/86400000) : 0;
+
+    infoEl.innerHTML = `
+      <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:13px">
+        <div style="font-weight:700;color:#1E293B;margin-bottom:6px">${email}</div>
+        <div style="color:#64748B">Trial: ${trialDays > 0 ? `<b style="color:#D97706">${trialDays} days left</b>` : '<b style="color:#DC2626">Expired</b>'}</div>
+        <div style="color:#64748B;margin-top:2px">Premium: ${premiumDays > 0 ? `<b style="color:#15803D">${premiumDays} days left</b>` : '<b style="color:#DC2626">None</b>'}</div>
+      </div>`;
+
+    document.getElementById('admin-target-email').textContent = email;
+    actionsEl.style.display = 'block';
+  } catch(e) {
+    infoEl.innerHTML = `<div style="font-size:13px;color:#DC2626">Error: ${e.message}</div>`;
+  }
+}
+
+async function adminAction(action) {
+  if (!_adminTargetUid) return;
+  const resultEl = document.getElementById('admin-action-result');
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F0F4FF'; resultEl.style.color = '#1A237E';
+  resultEl.textContent = 'Processing…';
+
+  try {
+    const ref  = firebase.firestore().collection('users').doc(_adminTargetUid);
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : {};
+    const now  = Date.now();
+
+    if      (action === 'premium1')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 1*30*86400000  }, { merge:true });
+    else if (action === 'premium3')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 3*30*86400000  }, { merge:true });
+    else if (action === 'premium6')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 6*30*86400000  }, { merge:true });
+    else if (action === 'premium12')      await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 12*30*86400000 }, { merge:true });
+    else if (action === 'revokePremium')  await ref.set({ premiumExpiry: 0 }, { merge:true });
+    else if (action === 'trial3')         await ref.set({ trialStart: (data.trialStart||now) - 3*86400000  }, { merge:true });
+    else if (action === 'trial7')         await ref.set({ trialStart: (data.trialStart||now) - 7*86400000  }, { merge:true });
+    else if (action === 'trial30')        await ref.set({ trialStart: (data.trialStart||now) - 30*86400000 }, { merge:true });
+    else if (action === 'resetTrial')     await ref.set({ trialStart: now }, { merge:true });
+
+    resultEl.style.background = '#F0FDF4'; resultEl.style.color = '#15803D';
+    resultEl.textContent = '✅ Done! User sees changes on next app open.';
+    await adminLookupUser(); // refresh display
+  } catch(e) {
+    resultEl.style.background = '#FEF2F2'; resultEl.style.color = '#DC2626';
+    resultEl.textContent = '❌ Error: ' + e.message;
+  }
+}
 // ── SIGN OUT ──────────────────────────────────────────────
 async function _signOut() {
   try { if (firebaseAuth) await firebaseAuth.signOut(); } catch(e) {}
   localStorage.removeItem('mppsc_user');
-  _isAdmin = false; _setReviewNavVisible(false);
+  _isAdmin = false; _userRecord = { trialStart: 0, premiumExpiry: 0 }; _setReviewNavVisible(false);
   document.getElementById('account-modal')?.remove();
   document.getElementById('user-badge')?.remove();
   if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
@@ -466,10 +631,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const user = getLocalUser();
     if (!user) { setTimeout(showLoginScreen, 800); }
     else {
-      updateUserBadge();
-      if (!isPremium() && !_isAdmin && !isTrialActive(user.uid)) {
-        setTimeout(() => showPaywall('full app access'), 1500);
-      }
+      // Reload Firestore record in case of cached login
+      _loadAndInitUser(user.uid).then(() => {
+        updateUserBadge();
+        if (!isPremium() && !_isAdmin && !isTrialActive()) {
+          setTimeout(() => showPaywall('full app access'), 1500);
+        }
+      });
     }
   }, 500);
 });
