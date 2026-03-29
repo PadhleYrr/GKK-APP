@@ -202,19 +202,22 @@ function removeLoginScreen() { document.getElementById('login-screen')?.remove()
 let _userRecord = { trialStart: 0, premiumExpiry: 0 };
 
 async function _loadAndInitUser(uid) {
-  const email = firebase.auth().currentUser?.email || '';
+  const email = (firebase.auth().currentUser?.email || '').trim().toLowerCase();
   try {
-    const ref = firebase.firestore().collection('users').doc(uid);
+    const db  = firebase.firestore();
+    const ref = db.collection('users').doc(uid);
     const snap = await ref.get();
     if (snap.exists && snap.data().trialStart) {
       // ✅ Normal case — load from Firestore
       const d = snap.data();
       _userRecord = { trialStart: d.trialStart, premiumExpiry: d.premiumExpiry||0 };
-      // Backfill email if missing (for admin lookup)
-      if (!d.email) ref.set({ email }, { merge: true });
+      // Always keep email fresh (needed by admin lookup via emailIndex)
+      if ((d.email||'').trim().toLowerCase() !== email) {
+        ref.set({ email }, { merge: true });
+        _writeEmailIndex(db, email, uid);
+      }
     } else {
-      // Doc missing or trialStart missing — first real login for this account
-      // Check localStorage in case they had an old install
+      // Doc missing or trialStart missing — first login for this account
       const cached = localStorage.getItem('userRecord_' + uid);
       const oldTrialKey = localStorage.getItem('trial_start_' + uid);
       let trialStart;
@@ -228,8 +231,9 @@ async function _loadAndInitUser(uid) {
         showToastSafe('🎁 7-day free trial started!', '#15803D');
       }
       _userRecord = { trialStart, premiumExpiry: snap.exists ? (snap.data().premiumExpiry||0) : 0 };
-      // Write to Firestore — this is the one-time setup
+      // Write user doc + email index — no composite index required
       await ref.set({ trialStart, premiumExpiry: _userRecord.premiumExpiry, email }, { merge: true });
+      _writeEmailIndex(db, email, uid);
     }
   } catch(e) {
     console.warn('Firestore error:', e);
@@ -241,6 +245,18 @@ async function _loadAndInitUser(uid) {
     else _userRecord = { trialStart: Date.now(), premiumExpiry: 0 };
   }
   localStorage.setItem('userRecord_' + uid, JSON.stringify(_userRecord));
+}
+
+// ── EMAIL → UID INDEX ─────────────────────────────────────
+// Stores emailIndex/{sanitisedEmail} = { uid } so admin lookup
+// never needs a Firestore composite index (no .where() query).
+function _emailKey(email) {
+  // Firestore doc IDs can't contain '/' — replace @ and . safely
+  return (email||'').trim().toLowerCase().replace(/[.@]/g, '_');
+}
+function _writeEmailIndex(db, email, uid) {
+  if (!email || !uid) return;
+  db.collection('emailIndex').doc(_emailKey(email)).set({ uid, email }, { merge: true }).catch(() => {});
 }
 
 // ── TRIAL SYSTEM ──────────────────────────────────────────
@@ -553,8 +569,9 @@ let _adminTargetUid   = null;
 let _adminTargetEmail = null;
 
 async function adminLookupUser() {
-  const email = document.getElementById('admin-email-input').value.trim();
-  if (!email) return;
+  const rawEmail = document.getElementById('admin-email-input').value.trim();
+  if (!rawEmail) return;
+  const email     = rawEmail.toLowerCase();
   const infoEl    = document.getElementById('admin-user-info');
   const actionsEl = document.getElementById('admin-actions');
   infoEl.style.display = 'block';
@@ -563,18 +580,24 @@ async function adminLookupUser() {
   _adminTargetUid = null;
 
   try {
-    const snap = await firebase.firestore().collection('users').where('email','==',email).limit(1).get();
-    if (snap.empty) {
-      infoEl.innerHTML = '<div style="font-size:13px;color:#DC2626">❌ No user found with that email.</div>';
+    const db = firebase.firestore();
+
+    // Step 1: look up UID from emailIndex (no composite index needed)
+    const idxSnap = await db.collection('emailIndex').doc(_emailKey(email)).get();
+    if (!idxSnap.exists) {
+      infoEl.innerHTML = '<div style="font-size:13px;color:#DC2626">❌ No user found with that email.<br><span style="opacity:.6;font-size:11px">They may need to log in once to register.</span></div>';
       return;
     }
-    const doc  = snap.docs[0];
-    const data = doc.data();
-    _adminTargetUid   = doc.id;
+    const uid = idxSnap.data().uid;
+
+    // Step 2: fetch user doc directly by UID (no query, no index)
+    const userSnap = await db.collection('users').doc(uid).get();
+    const data     = userSnap.exists ? userSnap.data() : {};
+    _adminTargetUid   = uid;
     _adminTargetEmail = email;
 
     const now = Date.now();
-    const trialDays   = data.trialStart   ? Math.max(0, Math.ceil((data.trialStart + 7*86400000 - now)/86400000)) : 0;
+    const trialDays   = data.trialStart ? Math.max(0, Math.ceil((data.trialStart + 7*86400000 - now)/86400000)) : 0;
     const premiumDays = (data.premiumExpiry||0) > now ? Math.ceil((data.premiumExpiry - now)/86400000) : 0;
 
     infoEl.innerHTML = `

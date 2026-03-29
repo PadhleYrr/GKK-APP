@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users/{uid} ───────────────────────────────────────
+    // Each user can read/write only their own document.
+    // Admins can write any user doc (needed for setPremium via admin panel).
+    match /users/{uid} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid;
+      // Admin override: allow write if caller is listed in config/admins
+      // (client-side admin panel calls this; Firestore rules enforce it server-side)
+      allow write: if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // ── emailIndex/{emailKey} ─────────────────────────────
+    // Any logged-in user can write their own entry (keyed by their email).
+    // Only admins can read (used by admin lookup only).
+    match /emailIndex/{key} {
+      allow write: if request.auth != null;
+      allow read:  if request.auth != null && isAdmin(request.auth.token.email);
+    }
+
+    // ── config/admins ─────────────────────────────────────
+    // Read-only for all authenticated users (needed by _checkAdmin).
+    // Only writable via Firebase Console or Admin SDK.
+    match /config/admins {
+      allow read:  if request.auth != null;
+      allow write: if false; // use Firebase Console to manage admin list
+    }
+
+    // ── Deny everything else ──────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ── Helper: check if email is in the admin list ───────
+    function isAdmin(email) {
+      let admins = get(/databases/$(database)/documents/config/admins);
+      return admins.exists && (email in admins.data.emails);
+    }
+  }
+}
