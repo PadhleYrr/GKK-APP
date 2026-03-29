@@ -1473,7 +1473,13 @@ async function _checkAppConfig() {
     if (!snap.exists) return;
     const cfg = snap.data();
 
-    // Maintenance mode
+    // Maintenance mode — skip for admin
+    const currentEmail = (firebase.auth().currentUser?.email || '').toLowerCase();
+    try {
+      const adminSnap = await db.collection('config').doc('admins').get();
+      const adminEmails = adminSnap.exists ? (adminSnap.data().emails || []).map(e => e.trim().toLowerCase()) : [];
+      if (adminEmails.includes(currentEmail)) return; // admin bypasses everything
+    } catch(e) {}
     if (cfg.maintenanceMode) {
       _showMaintenanceScreen(cfg.maintenanceMessage || 'App is under maintenance. Please check back soon.');
       return;
