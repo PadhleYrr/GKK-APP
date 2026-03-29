@@ -202,26 +202,42 @@ function removeLoginScreen() { document.getElementById('login-screen')?.remove()
 let _userRecord = { trialStart: 0, premiumExpiry: 0 };
 
 async function _loadAndInitUser(uid) {
+  const email = firebase.auth().currentUser?.email || '';
   try {
     const ref = firebase.firestore().collection('users').doc(uid);
     const snap = await ref.get();
-    if (snap.exists) {
+    if (snap.exists && snap.data().trialStart) {
+      // ✅ Normal case — load from Firestore
       const d = snap.data();
-      _userRecord = { trialStart: d.trialStart||0, premiumExpiry: d.premiumExpiry||0 };
-      // Save email for admin lookup
-      if (!d.email) await ref.set({ email: firebase.auth().currentUser.email }, { merge: true });
+      _userRecord = { trialStart: d.trialStart, premiumExpiry: d.premiumExpiry||0 };
+      // Backfill email if missing (for admin lookup)
+      if (!d.email) ref.set({ email }, { merge: true });
     } else {
-      // First ever login — create record + start trial
-      const now = Date.now();
-      _userRecord = { trialStart: now, premiumExpiry: 0 };
-      await ref.set({ trialStart: now, premiumExpiry: 0, email: firebase.auth().currentUser.email });
-      showToastSafe('🎁 7-day free trial started!', '#15803D');
+      // Doc missing or trialStart missing — first real login for this account
+      // Check localStorage in case they had an old install
+      const cached = localStorage.getItem('userRecord_' + uid);
+      const oldTrialKey = localStorage.getItem('trial_start_' + uid);
+      let trialStart;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        trialStart = parsed.trialStart || Date.now();
+      } else if (oldTrialKey) {
+        trialStart = parseInt(oldTrialKey); // migrate from old system
+      } else {
+        trialStart = Date.now(); // truly new user
+        showToastSafe('🎁 7-day free trial started!', '#15803D');
+      }
+      _userRecord = { trialStart, premiumExpiry: snap.exists ? (snap.data().premiumExpiry||0) : 0 };
+      // Write to Firestore — this is the one-time setup
+      await ref.set({ trialStart, premiumExpiry: _userRecord.premiumExpiry, email }, { merge: true });
     }
   } catch(e) {
     console.warn('Firestore error:', e);
-    // Fallback to localStorage if offline
+    // Offline fallback — use cache, never reset trial
     const cached = localStorage.getItem('userRecord_' + uid);
+    const oldTrialKey = localStorage.getItem('trial_start_' + uid);
     if (cached) _userRecord = JSON.parse(cached);
+    else if (oldTrialKey) _userRecord = { trialStart: parseInt(oldTrialKey), premiumExpiry: 0 };
     else _userRecord = { trialStart: Date.now(), premiumExpiry: 0 };
   }
   localStorage.setItem('userRecord_' + uid, JSON.stringify(_userRecord));
@@ -323,7 +339,7 @@ function openPayment() {
 // ── ON USER LOGGED IN ─────────────────────────────────────
 function onUserLoggedIn(user) {
   removeLoginScreen();
-  updateUserBadge();
+  // Note: updateUserBadge() is called at end of _checkAdmin with correct _isAdmin value
   const daysLeft = getTrialDaysLeft();
   if (!isPremium() && !_isAdmin && daysLeft > 0 && daysLeft <= 2) {
     setTimeout(() => showToastSafe(`⚠️ Trial ends in ${daysLeft} day${daysLeft > 1 ? 's' : ''}!`, '#D97706'), 3000);
@@ -634,9 +650,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const user = getLocalUser();
     if (!user) { setTimeout(showLoginScreen, 800); }
     else {
-      // Reload Firestore record in case of cached login
+      // Reload Firestore record + admin check, then update UI
       _loadAndInitUser(user.uid).then(() => {
-        updateUserBadge();
+        return _checkAdmin(user.email); // _checkAdmin calls updateUserBadge at end
+      }).then(() => {
         if (!isPremium() && !_isAdmin && !isTrialActive()) {
           setTimeout(() => showPaywall('full app access'), 1500);
         }
