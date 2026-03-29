@@ -38,6 +38,8 @@ function initFirebase() {
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   firebaseAuth = firebase.auth();
   _setReviewNavVisible(false);
+  // Check remote app config (banner, maintenance, force-update)
+  _checkAppConfig();
   firebaseAuth.onAuthStateChanged(async user => {
     if (user) {
       currentUser = user;
@@ -207,15 +209,18 @@ async function _loadAndInitUser(uid) {
     const db  = firebase.firestore();
     const ref = db.collection('users').doc(uid);
     const snap = await ref.get();
+    const authUser = firebase.auth().currentUser;
+    const authName = authUser?.displayName || '';
     if (snap.exists && snap.data().trialStart) {
       // ✅ Normal case — load from Firestore
       const d = snap.data();
       _userRecord = { trialStart: d.trialStart, premiumExpiry: d.premiumExpiry||0 };
-      // Always keep email fresh (needed by admin lookup via emailIndex)
-      if ((d.email||'').trim().toLowerCase() !== email) {
-        ref.set({ email }, { merge: true });
-        _writeEmailIndex(db, email, uid);
-      }
+      // Refresh live fields every login
+      const liveUpdate = { lastSeen: Date.now(), sessionCount: firebase.firestore.FieldValue.increment(1) };
+      if ((d.email||'').trim().toLowerCase() !== email) liveUpdate.email = email;
+      if (authName && !d.name) liveUpdate.name = authName;
+      ref.set(liveUpdate, { merge: true });
+      _writeEmailIndex(db, email, uid);
     } else {
       // Doc missing or trialStart missing — first login for this account
       const cached = localStorage.getItem('userRecord_' + uid);
@@ -232,7 +237,9 @@ async function _loadAndInitUser(uid) {
       }
       _userRecord = { trialStart, premiumExpiry: snap.exists ? (snap.data().premiumExpiry||0) : 0 };
       // Write user doc + email index — no composite index required
-      await ref.set({ trialStart, premiumExpiry: _userRecord.premiumExpiry, email }, { merge: true });
+      const registeredAt = snap.exists ? (snap.data().registeredAt || trialStart) : trialStart;
+      await ref.set({ trialStart, premiumExpiry: _userRecord.premiumExpiry, email,
+                      name: authName, registeredAt, lastSeen: Date.now() }, { merge: true });
       _writeEmailIndex(db, email, uid);
     }
   } catch(e) {
@@ -503,6 +510,10 @@ function showAccountModal() {
 
 
 // ── ADMIN PANEL ───────────────────────────────────────────
+// ── ADMIN PANEL ───────────────────────────────────────────
+// Tab state
+let _adminTab = 'user';   // 'user' | 'stats'
+
 function showAdminPanel() {
   document.getElementById('account-modal')?.remove();
   document.getElementById('admin-panel')?.remove();
@@ -511,62 +522,135 @@ function showAdminPanel() {
   el.id = 'admin-panel';
   el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999999;display:flex;align-items:flex-end;justify-content:center;padding:0';
   el.innerHTML = `
-    <div style="background:#fff;border-radius:24px 24px 0 0;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">
-      <div style="background:linear-gradient(135deg,#4527A0,#6A1B9A);border-radius:24px 24px 0 0;padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">🔧 Admin Panel</div>
-          <div style="font-size:12px;opacity:.7;margin-top:2px">Manage users, trial & premium</div>
-        </div>
-        <button onclick="document.getElementById('admin-panel').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
-      </div>
-      <div style="padding:20px">
+    <div id="admin-sheet" style="background:#F8FAFF;border-radius:24px 24px 0 0;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">
 
-        <div style="background:#F8FAFF;border-radius:12px;padding:16px;margin-bottom:16px">
-          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#1A237E;margin-bottom:10px">🔍 Lookup User by Email</div>
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#3730A3,#6D28D9);border-radius:24px 24px 0 0;padding:20px 24px 0;color:#fff">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">⚙️ Admin Panel</div>
+            <div style="font-size:11px;opacity:.65;margin-top:2px">MP GK Portal — Control Centre</div>
+          </div>
+          <button onclick="document.getElementById('admin-panel').remove()"
+            style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px">✕</button>
+        </div>
+        <!-- Tabs -->
+        <div style="display:flex;gap:4px;background:rgba(0,0,0,.2);border-radius:12px;padding:4px">
+          <button id="atab-user" onclick="adminSwitchTab('user')"
+            style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:#3730A3;font-family:'DM Sans',sans-serif">👤 User</button>
+          <button id="atab-stats" onclick="adminSwitchTab('stats')"
+            style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">📊 Stats</button>
+        </div>
+        <div style="height:16px"></div>
+      </div>
+
+      <!-- Tab: User Management -->
+      <div id="atab-content-user" style="padding:16px">
+
+        <!-- Search card -->
+        <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-size:12px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔍 User Lookup</div>
           <div style="display:flex;gap:8px">
-            <input id="admin-email-input" type="email" placeholder="user@email.com"
-              style="flex:1;padding:10px 12px;border:2px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
-            <button onclick="adminLookupUser()" style="padding:10px 16px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Look up</button>
+            <input id="admin-email-input" type="email" placeholder="email@example.com"
+              onkeydown="if(event.key==='Enter')adminLookupUser()"
+              style="flex:1;padding:10px 12px;border:2px solid #E2E8F0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
+            <button onclick="adminLookupUser()"
+              style="padding:10px 16px;background:#3730A3;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Look up</button>
           </div>
-          <div id="admin-user-info" style="margin-top:12px;display:none"></div>
+          <div id="admin-user-info" style="margin-top:10px;display:none"></div>
         </div>
 
+        <!-- User profile card (hidden until lookup) -->
+        <div id="admin-profile-card" style="display:none;background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div id="admin-profile-header" style="background:linear-gradient(135deg,#3730A3,#6D28D9);padding:16px 16px 14px;color:#fff">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div id="admin-profile-avatar" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0">?</div>
+              <div>
+                <div id="admin-profile-name" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800">—</div>
+                <div id="admin-profile-email" style="font-size:11px;opacity:.75">—</div>
+              </div>
+              <div id="admin-profile-badge" style="margin-left:auto;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.2)">—</div>
+            </div>
+          </div>
+          <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="admin-profile-stats"></div>
+        </div>
+
+        <!-- Actions (hidden until lookup) -->
         <div id="admin-actions" style="display:none">
-          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#1A237E;margin-bottom:10px">⚡ Actions for <span id="admin-target-email" style="color:#5E35B1"></span></div>
 
-          <div style="background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:10px">
-            <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:8px">💎 Premium</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button onclick="adminAction('premium1')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+1 Month</button>
-              <button onclick="adminAction('premium3')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+3 Months</button>
-              <button onclick="adminAction('premium6')"  style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+6 Months</button>
-              <button onclick="adminAction('premium12')" style="padding:8px 12px;background:#15803D;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+12 Months</button>
-              <button onclick="adminAction('revokePremium')" style="padding:8px 12px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Revoke</button>
+          <!-- Premium -->
+          <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+            <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">💎 Premium Access</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
+              <button onclick="adminAction('premium1')"  style="padding:9px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+1 Month</button>
+              <button onclick="adminAction('premium3')"  style="padding:9px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+3 Months</button>
+              <button onclick="adminAction('premium6')"  style="padding:9px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+6 Months</button>
+              <button onclick="adminAction('premium12')" style="padding:9px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+12 Months</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <button onclick="adminAction('premiumCustom')" style="padding:9px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #93C5FD;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Custom Days…</button>
+              <button onclick="adminAction('revokePremium')" style="padding:9px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🚫 Revoke</button>
             </div>
           </div>
 
-          <div style="background:#FFFBEB;border-radius:10px;padding:14px;margin-bottom:10px">
-            <div style="font-size:13px;font-weight:700;color:#D97706;margin-bottom:8px">⏳ Trial</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button onclick="adminAction('trial3')"    style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+3 Days</button>
-              <button onclick="adminAction('trial7')"    style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+7 Days</button>
-              <button onclick="adminAction('trial30')"   style="padding:8px 12px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+30 Days</button>
-              <button onclick="adminAction('resetTrial')" style="padding:8px 12px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Reset to 7d</button>
+          <!-- Trial -->
+          <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+            <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">⏳ Trial Control</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px">
+              <button onclick="adminAction('trial3')"  style="padding:9px;background:#FFFBEB;color:#92400E;border:1.5px solid #FCD34D;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+3 Days</button>
+              <button onclick="adminAction('trial7')"  style="padding:9px;background:#FFFBEB;color:#92400E;border:1.5px solid #FCD34D;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+7 Days</button>
+              <button onclick="adminAction('trial30')" style="padding:9px;background:#FFFBEB;color:#92400E;border:1.5px solid #FCD34D;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">+30 Days</button>
+            </div>
+            <button onclick="adminAction('resetTrial')" style="width:100%;padding:9px;background:#F0F4FF;color:#3730A3;border:1.5px solid #A5B4FC;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">↺ Reset to Fresh 7-Day Trial</button>
+          </div>
+
+          <!-- Account -->
+          <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+            <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔧 Account Actions</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <button onclick="adminAction('addNote')"     style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📝 Add Note</button>
+              <button onclick="adminAction('copyUID')"     style="padding:9px;background:#F8FAFF;color:#3730A3;border:1.5px solid #C7D2FE;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">📋 Copy UID</button>
+              <button onclick="adminAction('banUser')"     style="padding:9px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🚫 Ban User</button>
+              <button onclick="adminAction('unbanUser')"   style="padding:9px;background:#F0FDF4;color:#166534;border:1.5px solid #86EFAC;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✅ Unban</button>
             </div>
           </div>
 
-          <div id="admin-action-result" style="font-size:13px;font-weight:600;padding:10px;border-radius:8px;display:none;margin-top:4px"></div>
+          <!-- Result feedback -->
+          <div id="admin-action-result" style="font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;display:none;margin-bottom:8px"></div>
         </div>
 
       </div>
+
+      <!-- Tab: Stats -->
+      <div id="atab-content-stats" style="padding:16px;display:none">
+        <div id="admin-stats-loading" style="text-align:center;padding:40px 0;color:#64748B;font-size:13px">Loading stats…</div>
+        <div id="admin-stats-content" style="display:none"></div>
+      </div>
+
     </div>
   `;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  adminSwitchTab('user');
+}
+
+function adminSwitchTab(tab) {
+  _adminTab = tab;
+  ['user','stats'].forEach(t => {
+    const btn  = document.getElementById('atab-' + t);
+    const cont = document.getElementById('atab-content-' + t);
+    if (!btn || !cont) return;
+    const active = t === tab;
+    btn.style.background = active ? '#fff' : 'transparent';
+    btn.style.color       = active ? '#3730A3' : 'rgba(255,255,255,.7)';
+    cont.style.display    = active ? 'block' : 'none';
+  });
+  if (tab === 'stats') adminLoadStats();
 }
 
 let _adminTargetUid   = null;
 let _adminTargetEmail = null;
+let _adminTargetData  = null;
 
 async function adminLookupUser() {
   const rawEmail = document.getElementById('admin-email-input').value.trim();
@@ -574,52 +658,93 @@ async function adminLookupUser() {
   const email     = rawEmail.toLowerCase();
   const infoEl    = document.getElementById('admin-user-info');
   const actionsEl = document.getElementById('admin-actions');
-  infoEl.style.display = 'block';
-  infoEl.innerHTML = '<div style="font-size:13px;color:#64748B">Looking up…</div>';
+  const profileEl = document.getElementById('admin-profile-card');
+  infoEl.style.display    = 'block';
   actionsEl.style.display = 'none';
-  _adminTargetUid = null;
+  profileEl.style.display = 'none';
+  infoEl.innerHTML = '<div style="font-size:13px;color:#64748B;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:14px;border:2px solid #6D28D9;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></span> Looking up…</div>';
+  _adminTargetUid = null; _adminTargetData = null;
 
   try {
     const db = firebase.firestore();
-
-    // Step 1: look up UID from emailIndex (no composite index needed)
     const idxSnap = await db.collection('emailIndex').doc(_emailKey(email)).get();
     if (!idxSnap.exists) {
-      infoEl.innerHTML = '<div style="font-size:13px;color:#DC2626">❌ No user found with that email.<br><span style="opacity:.6;font-size:11px">They may need to log in once to register.</span></div>';
+      infoEl.innerHTML = `<div style="font-size:13px;color:#DC2626;background:#FEF2F2;padding:10px 12px;border-radius:10px">
+        ❌ No user found with <b>${email}</b><br>
+        <span style="font-size:11px;opacity:.7">User must log in at least once to appear here.</span>
+      </div>`;
       return;
     }
     const uid = idxSnap.data().uid;
-
-    // Step 2: fetch user doc directly by UID (no query, no index)
     const userSnap = await db.collection('users').doc(uid).get();
-    const data     = userSnap.exists ? userSnap.data() : {};
+    const data = userSnap.exists ? userSnap.data() : {};
     _adminTargetUid   = uid;
     _adminTargetEmail = email;
+    _adminTargetData  = data;
 
-    const now = Date.now();
-    const trialDays   = data.trialStart ? Math.max(0, Math.ceil((data.trialStart + 7*86400000 - now)/86400000)) : 0;
-    const premiumDays = (data.premiumExpiry||0) > now ? Math.ceil((data.premiumExpiry - now)/86400000) : 0;
-
-    infoEl.innerHTML = `
-      <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:13px">
-        <div style="font-weight:700;color:#1E293B;margin-bottom:6px">${email}</div>
-        <div style="color:#64748B">Trial: ${trialDays > 0 ? `<b style="color:#D97706">${trialDays} days left</b>` : '<b style="color:#DC2626">Expired</b>'}</div>
-        <div style="color:#64748B;margin-top:2px">Premium: ${premiumDays > 0 ? `<b style="color:#15803D">${premiumDays} days left</b>` : '<b style="color:#DC2626">None</b>'}</div>
-      </div>`;
-
-    document.getElementById('admin-target-email').textContent = email;
+    infoEl.style.display = 'none';
+    _renderAdminProfile(uid, email, data);
+    document.getElementById('admin-target-email') && (document.getElementById('admin-target-email').textContent = email);
     actionsEl.style.display = 'block';
+    profileEl.style.display = 'block';
+    const resultEl = document.getElementById('admin-action-result');
+    if (resultEl) resultEl.style.display = 'none';
   } catch(e) {
-    infoEl.innerHTML = `<div style="font-size:13px;color:#DC2626">Error: ${e.message}</div>`;
+    infoEl.innerHTML = `<div style="font-size:13px;color:#DC2626;background:#FEF2F2;padding:10px 12px;border-radius:10px">❌ Error: ${e.message}</div>`;
   }
 }
 
+function _renderAdminProfile(uid, email, data) {
+  const now          = Date.now();
+  const name         = data.name || email.split('@')[0];
+  const initial      = name.charAt(0).toUpperCase();
+  const trialDays    = data.trialStart ? Math.max(0, Math.ceil((data.trialStart + 7*86400000 - now)/86400000)) : 0;
+  const premiumDays  = (data.premiumExpiry||0) > now ? Math.ceil((data.premiumExpiry - now)/86400000) : 0;
+  const isBanned     = data.banned === true;
+  const status       = isBanned ? 'banned' : premiumDays > 0 ? 'premium' : trialDays > 0 ? 'trial' : 'expired';
+  const badgeMap     = { premium:'💎 PREMIUM', trial:'⏳ TRIAL', expired:'🔴 EXPIRED', banned:'🚫 BANNED' };
+  const badgeBgMap   = { premium:'#059669', trial:'#D97706', expired:'#DC2626', banned:'#1E293B' };
+  const regDate      = data.registeredAt ? new Date(data.registeredAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const lastSeenDate = data.lastSeen     ? _timeAgo(data.lastSeen) : '—';
+
+  document.getElementById('admin-profile-avatar').textContent = initial;
+  document.getElementById('admin-profile-name').textContent   = name;
+  document.getElementById('admin-profile-email').textContent  = email;
+  const badge = document.getElementById('admin-profile-badge');
+  badge.textContent        = badgeMap[status];
+  badge.style.background   = badgeBgMap[status];
+
+  const statsGrid = document.getElementById('admin-profile-stats');
+  statsGrid.innerHTML = [
+    { label:'Registered', value: regDate },
+    { label:'Last Seen',  value: lastSeenDate },
+    { label:'Trial Left', value: trialDays > 0 ? `${trialDays} days` : 'Expired', color: trialDays > 0 ? '#D97706' : '#DC2626' },
+    { label:'Premium',    value: premiumDays > 0 ? `${premiumDays} days` : 'None', color: premiumDays > 0 ? '#059669' : '#94A3B8' },
+    { label:'UID',        value: uid.slice(0,10)+'…', mono: true },
+    { label:'Note',       value: data.adminNote || '—', small: true },
+  ].map(s => `
+    <div style="background:#F8FAFF;border-radius:9px;padding:9px 10px">
+      <div style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${s.label}</div>
+      <div style="font-size:12px;font-weight:700;color:${s.color||'#1E293B'};margin-top:2px;${s.mono?'font-family:monospace':''}${s.small?'font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis':''}">${s.value}</div>
+    </div>`).join('');
+}
+
+function _timeAgo(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000)       return 'Just now';
+  if (diff < 3600000)     return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000)    return Math.floor(diff/3600000) + 'h ago';
+  if (diff < 2592000000)  return Math.floor(diff/86400000) + 'd ago';
+  return new Date(ts).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+}
+
 async function adminAction(action) {
-  if (!_adminTargetUid) return;
+  if (!_adminTargetUid && !['copyUID'].includes(action)) return;
   const resultEl = document.getElementById('admin-action-result');
-  resultEl.style.display = 'block';
-  resultEl.style.background = '#F0F4FF'; resultEl.style.color = '#1A237E';
-  resultEl.textContent = 'Processing…';
+  resultEl.style.display    = 'block';
+  resultEl.style.background = '#EFF6FF';
+  resultEl.style.color      = '#1E40AF';
+  resultEl.textContent      = '⏳ Processing…';
 
   try {
     const ref  = firebase.firestore().collection('users').doc(_adminTargetUid);
@@ -627,24 +752,830 @@ async function adminAction(action) {
     const data = snap.exists ? snap.data() : {};
     const now  = Date.now();
 
-    if      (action === 'premium1')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 1*30*86400000  }, { merge:true });
-    else if (action === 'premium3')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 3*30*86400000  }, { merge:true });
-    else if (action === 'premium6')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 6*30*86400000  }, { merge:true });
-    else if (action === 'premium12')      await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 12*30*86400000 }, { merge:true });
-    else if (action === 'revokePremium')  await ref.set({ premiumExpiry: 0 }, { merge:true });
-    else if (action === 'trial3')         await ref.set({ trialStart: (data.trialStart||now) - 3*86400000  }, { merge:true });
-    else if (action === 'trial7')         await ref.set({ trialStart: (data.trialStart||now) - 7*86400000  }, { merge:true });
-    else if (action === 'trial30')        await ref.set({ trialStart: (data.trialStart||now) - 30*86400000 }, { merge:true });
-    else if (action === 'resetTrial')     await ref.set({ trialStart: now }, { merge:true });
+    if (action === 'premium1')       await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 1*30*86400000  }, { merge:true });
+    else if (action === 'premium3')  await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 3*30*86400000  }, { merge:true });
+    else if (action === 'premium6')  await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 6*30*86400000  }, { merge:true });
+    else if (action === 'premium12') await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + 12*30*86400000 }, { merge:true });
+    else if (action === 'revokePremium') await ref.set({ premiumExpiry: 0 }, { merge:true });
+    else if (action === 'trial3')    await ref.set({ trialStart: (data.trialStart||now) - 3*86400000  }, { merge:true });
+    else if (action === 'trial7')    await ref.set({ trialStart: (data.trialStart||now) - 7*86400000  }, { merge:true });
+    else if (action === 'trial30')   await ref.set({ trialStart: (data.trialStart||now) - 30*86400000 }, { merge:true });
+    else if (action === 'resetTrial') await ref.set({ trialStart: now }, { merge:true });
+    else if (action === 'banUser')   await ref.set({ banned: true,  bannedAt: now }, { merge:true });
+    else if (action === 'unbanUser') await ref.set({ banned: false }, { merge:true });
+    else if (action === 'premiumCustom') {
+      const days = parseInt(prompt('Enter number of days to add:'));
+      if (isNaN(days) || days <= 0) { resultEl.textContent = '⚠️ Cancelled.'; return; }
+      await ref.set({ premiumExpiry: Math.max(data.premiumExpiry||now,now) + days*86400000 }, { merge:true });
+    }
+    else if (action === 'addNote') {
+      const note = prompt('Enter admin note for this user:', data.adminNote || '');
+      if (note === null) { resultEl.textContent = '⚠️ Cancelled.'; return; }
+      await ref.set({ adminNote: note }, { merge:true });
+    }
+    else if (action === 'copyUID') {
+      if (!_adminTargetUid) return;
+      navigator.clipboard?.writeText(_adminTargetUid).catch(()=>{});
+      resultEl.style.background = '#F0FDF4'; resultEl.style.color = '#166534';
+      resultEl.textContent = '📋 UID copied to clipboard!';
+      return;
+    }
 
-    resultEl.style.background = '#F0FDF4'; resultEl.style.color = '#15803D';
-    resultEl.textContent = '✅ Done! User sees changes on next app open.';
-    await adminLookupUser(); // refresh display
+    resultEl.style.background = '#F0FDF4'; resultEl.style.color = '#166534';
+    resultEl.textContent = '✅ Done! User will see changes on next app open.';
+    await adminLookupUser();
   } catch(e) {
     resultEl.style.background = '#FEF2F2'; resultEl.style.color = '#DC2626';
     resultEl.textContent = '❌ Error: ' + e.message;
   }
 }
+
+// ══════════════════════════════════════════════════════════
+//  ADMIN — TABS: stats | tools | content | settings
+// ══════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────
+// Patch showAdminPanel to add 4 tabs instead of 2
+// We monkey-patch the tab row HTML after panel is created
+// ─────────────────────────────────────────────────────────
+const _origShowAdminPanel = showAdminPanel;
+// Override tab HTML + add 2 new tab content divs
+function showAdminPanel() {
+  _origShowAdminPanel();
+  // Replace 2-tab row with 4-tab row
+  const tabRow = document.querySelector('#admin-panel [id^="atab-user"]')?.parentElement;
+  if (tabRow) {
+    tabRow.innerHTML = `
+      <button id="atab-user"     onclick="adminSwitchTab('user')"     style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#3730A3;font-family:'DM Sans',sans-serif">👤 User</button>
+      <button id="atab-stats"    onclick="adminSwitchTab('stats')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">📊 Stats</button>
+      <button id="atab-tools"    onclick="adminSwitchTab('tools')"    style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">🛠 Tools</button>
+      <button id="atab-settings" onclick="adminSwitchTab('settings')" style="flex:1;padding:7px 4px;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:rgba(255,255,255,.7);font-family:'DM Sans',sans-serif">⚙️ App</button>
+    `;
+  }
+  // Inject tools & settings tab panes
+  const sheet = document.getElementById('admin-sheet');
+  if (sheet) {
+    if (!document.getElementById('atab-content-tools')) {
+      const toolsDiv = document.createElement('div');
+      toolsDiv.id = 'atab-content-tools';
+      toolsDiv.style.cssText = 'padding:16px;display:none';
+      toolsDiv.innerHTML = _toolsTabHTML();
+      sheet.appendChild(toolsDiv);
+    }
+    if (!document.getElementById('atab-content-settings')) {
+      const settingsDiv = document.createElement('div');
+      settingsDiv.id = 'atab-content-settings';
+      settingsDiv.style.cssText = 'padding:16px;display:none';
+      settingsDiv.innerHTML = '<div id="settings-loading" style="text-align:center;padding:40px;color:#64748B;font-size:13px">Loading…</div><div id="settings-content" style="display:none"></div>';
+      sheet.appendChild(settingsDiv);
+    }
+  }
+  adminSwitchTab('user');
+}
+
+// Extend tab switcher to handle 4 tabs
+const _origAdminSwitchTab = adminSwitchTab;
+function adminSwitchTab(tab) {
+  _adminTab = tab;
+  ['user','stats','tools','settings'].forEach(t => {
+    const btn  = document.getElementById('atab-' + t);
+    const cont = document.getElementById('atab-content-' + t);
+    if (!btn || !cont) return;
+    const active = t === tab;
+    btn.style.background = active ? '#fff' : 'transparent';
+    btn.style.color       = active ? '#3730A3' : 'rgba(255,255,255,.7)';
+    cont.style.display    = active ? 'block' : 'none';
+  });
+  if (tab === 'stats')    adminLoadStats();
+  if (tab === 'settings') adminLoadSettings();
+}
+
+// ── TOOLS TAB HTML ────────────────────────────────────────
+function _toolsTabHTML() {
+  return `
+    <!-- Coupon Codes -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🎟 Coupon Codes</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="coupon-code-input" placeholder="Code e.g. DIWALI50"
+          style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-transform:uppercase">
+        <input id="coupon-days-input" type="number" placeholder="Days" min="1" max="365"
+          style="width:70px;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+      </div>
+      <button onclick="adminCreateCoupon()"
+        style="width:100%;padding:9px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px">+ Create Coupon</button>
+      <div id="coupon-list" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <!-- Referral Tracking -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#0891B2;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🔗 Referral Tracking</div>
+      <div id="referral-stats" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <!-- Revenue Tracker -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">💰 Revenue Tracker</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="rev-amount" type="number" placeholder="Amount ₹" min="1"
+          style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+        <input id="rev-note" placeholder="Note"
+          style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+      </div>
+      <button onclick="adminAddRevenue()"
+        style="width:100%;padding:9px;background:#059669;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px">+ Log Payment</button>
+      <div id="revenue-summary" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <!-- User Feedback Inbox -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">📬 Feedback Inbox</div>
+      <div id="feedback-inbox" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <!-- Question Flags -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🚩 Flagged Questions</div>
+      <div id="flagged-questions" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <!-- Quiz Leaderboard -->
+    <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="font-size:11px;font-weight:700;color:#3730A3;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🏆 Quiz Leaderboard</div>
+      <div id="quiz-leaderboard" style="font-size:12px;color:#64748B">Loading…</div>
+    </div>
+
+    <div style="height:8px"></div>
+  `;
+}
+
+// ── STATS TAB (enhanced) ──────────────────────────────────
+async function adminLoadStats() {
+  const loadEl    = document.getElementById('admin-stats-loading');
+  const contentEl = document.getElementById('admin-stats-content');
+  if (!loadEl || !contentEl) return;
+  loadEl.style.display    = 'block';
+  contentEl.style.display = 'none';
+
+  try {
+    const db  = firebase.firestore();
+    const now = Date.now();
+    const snap = await db.collection('users').get();
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const total    = users.length;
+    const premium  = users.filter(u => (u.premiumExpiry||0) > now).length;
+    const trial    = users.filter(u => u.trialStart && (u.trialStart + 7*86400000) > now && (u.premiumExpiry||0) <= now).length;
+    const expired  = total - premium - trial;
+    const banned   = users.filter(u => u.banned === true).length;
+    const today    = users.filter(u => u.lastSeen && (now - u.lastSeen) < 86400000).length;
+    const week     = users.filter(u => u.lastSeen && (now - u.lastSeen) < 7*86400000).length;
+    const newToday = users.filter(u => u.registeredAt && (now - u.registeredAt) < 86400000).length;
+    const newWeek  = users.filter(u => u.registeredAt && (now - u.registeredAt) < 7*86400000).length;
+
+    // Revenue total
+    let revTotal = 0;
+    try {
+      const revSnap = await db.collection('config').doc('revenue').get();
+      if (revSnap.exists) revTotal = (revSnap.data().entries||[]).reduce((s,e) => s + (e.amount||0), 0);
+    } catch(e) {}
+
+    // Daily active for last 7 days bar chart
+    const dayLabels = [], dayValues = [];
+    for (let i = 6; i >= 0; i--) {
+      const d0 = now - i * 86400000, d1 = d0 + 86400000;
+      const label = new Date(d0).toLocaleDateString('en-IN',{weekday:'short'});
+      dayLabels.push(label);
+      dayValues.push(users.filter(u => u.lastSeen && u.lastSeen >= d0 && u.lastSeen < d1).length);
+    }
+    const maxVal = Math.max(...dayValues, 1);
+
+    loadEl.style.display    = 'none';
+    contentEl.style.display = 'block';
+    contentEl.innerHTML = `
+      <!-- Overview -->
+      <div style="font-size:11px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">👥 User Overview</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        ${[
+          { label:'Total Users',   value:total,   color:'#3730A3', bg:'#EEF2FF' },
+          { label:'Active Today',  value:today,   color:'#059669', bg:'#ECFDF5' },
+          { label:'💎 Premium',    value:premium, color:'#059669', bg:'#ECFDF5' },
+          { label:'⏳ On Trial',   value:trial,   color:'#D97706', bg:'#FFFBEB' },
+          { label:'🔴 Expired',    value:expired, color:'#DC2626', bg:'#FEF2F2' },
+          { label:'🚫 Banned',     value:banned,  color:'#64748B', bg:'#F1F5F9' },
+        ].map(s=>`<div style="background:${s.bg};border-radius:12px;padding:12px 14px">
+          <div style="font-size:11px;color:${s.color};font-weight:600">${s.label}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${s.color}">${s.value}</div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Revenue + Conversion -->
+      <div style="font-size:11px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">💰 Revenue & Growth</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        ${[
+          { label:'Total Revenue',  value:'₹'+revTotal, color:'#059669', bg:'#ECFDF5' },
+          { label:'Conversion',     value:total>0?Math.round(premium/total*100)+'%':'—', color:'#D97706', bg:'#FFFBEB' },
+          { label:'New Today',      value:newToday,  color:'#3730A3', bg:'#EEF2FF' },
+          { label:'New This Week',  value:newWeek,   color:'#3730A3', bg:'#EEF2FF' },
+          { label:'Active (7d)',    value:week,      color:'#059669', bg:'#ECFDF5' },
+          { label:'Avg Session/User', value: total>0 ? (users.reduce((s,u)=>s+(u.sessionCount||0),0)/total).toFixed(1) : '—', color:'#7C3AED', bg:'#F5F3FF' },
+        ].map(s=>`<div style="background:${s.bg};border-radius:12px;padding:12px 14px">
+          <div style="font-size:11px;color:${s.color};font-weight:600">${s.label}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${s.color}">${s.value}</div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Daily Active Bar Chart -->
+      <div style="font-size:11px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📈 Daily Active Users (7d)</div>
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="display:flex;align-items:flex-end;gap:6px;height:70px;margin-bottom:6px">
+          ${dayValues.map((v,i)=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="font-size:9px;color:#6D28D9;font-weight:700">${v||''}</div>
+              <div style="width:100%;background:${v===maxVal?'#6D28D9':'#C4B5FD'};border-radius:5px 5px 0 0;height:${Math.max(4,Math.round(v/maxVal*50))}px;transition:height .3s"></div>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px">
+          ${dayLabels.map(l=>`<div style="flex:1;text-align:center;font-size:9px;color:#94A3B8;font-weight:600">${l}</div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Recent signups -->
+      <div style="font-size:11px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">🕐 Recent Signups</div>
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        ${users.filter(u=>u.registeredAt).sort((a,b)=>b.registeredAt-a.registeredAt).slice(0,8).map(u=>{
+          const isPrem=(u.premiumExpiry||0)>now, isTrial=u.trialStart&&(u.trialStart+7*86400000)>now;
+          const dot=isPrem?'💎':isTrial?'⏳':'🔴';
+          return `<div style="display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid #F1F5F9;gap:8px">
+            <span>${dot}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.name||(u.email||'').split('@')[0]}</div>
+              <div style="font-size:11px;color:#94A3B8">${u.email||'—'}</div>
+            </div>
+            <div style="font-size:11px;color:#94A3B8;white-space:nowrap">${_timeAgo(u.registeredAt)}</div>
+          </div>`;
+        }).join('')||'<div style="padding:16px;text-align:center;color:#94A3B8;font-size:13px">No data yet</div>'}
+      </div>
+      <div style="height:12px"></div>
+    `;
+
+    // Also load tools tab data
+    _loadToolsData();
+  } catch(e) {
+    loadEl.innerHTML = `<div style="color:#DC2626;font-size:13px">❌ ${e.message}</div>`;
+  }
+}
+
+// ── TOOLS TAB DATA LOADER ─────────────────────────────────
+async function _loadToolsData() {
+  _loadCoupons();
+  _loadReferrals();
+  _loadRevenueSummary();
+  _loadFeedbackInbox();
+  _loadFlaggedQuestions();
+  _loadLeaderboard();
+}
+
+// ── COUPONS ───────────────────────────────────────────────
+async function _loadCoupons() {
+  const el = document.getElementById('coupon-list'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('config').doc('coupons').get();
+    const codes = snap.exists ? (snap.data().codes || []) : [];
+    if (!codes.length) { el.innerHTML = '<div style="color:#94A3B8;padding:4px 0">No coupons yet.</div>'; return; }
+    el.innerHTML = codes.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #F1F5F9">
+        <div>
+          <span style="font-family:monospace;font-weight:700;color:#7C3AED;font-size:13px">${c.code}</span>
+          <span style="font-size:11px;color:#94A3B8;margin-left:6px">→ ${c.days}d premium</span>
+          ${c.usedBy ? `<span style="font-size:10px;background:#FEF2F2;color:#DC2626;padding:1px 6px;border-radius:10px;margin-left:4px">Used</span>` : `<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:1px 6px;border-radius:10px;margin-left:4px">Active</span>`}
+        </div>
+        <button onclick="adminDeleteCoupon('${c.code}')" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:14px">🗑</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<span style="color:#DC2626">${e.message}</span>`; }
+}
+
+async function adminCreateCoupon() {
+  const code = (document.getElementById('coupon-code-input')?.value||'').trim().toUpperCase();
+  const days = parseInt(document.getElementById('coupon-days-input')?.value||'0');
+  if (!code || !days) { showToastSafe('Enter code and days', '#DC2626'); return; }
+  try {
+    const ref  = firebase.firestore().collection('config').doc('coupons');
+    const snap = await ref.get();
+    const codes = snap.exists ? (snap.data().codes||[]) : [];
+    if (codes.find(c => c.code === code)) { showToastSafe('Code already exists!', '#DC2626'); return; }
+    codes.push({ code, days, createdAt: Date.now(), usedBy: null });
+    await ref.set({ codes }, { merge: true });
+    showToastSafe('✅ Coupon created!', '#7C3AED');
+    document.getElementById('coupon-code-input').value = '';
+    document.getElementById('coupon-days-input').value = '';
+    _loadCoupons();
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminDeleteCoupon(code) {
+  if (!confirm('Delete coupon ' + code + '?')) return;
+  try {
+    const ref  = firebase.firestore().collection('config').doc('coupons');
+    const snap = await ref.get();
+    const codes = (snap.data()?.codes||[]).filter(c => c.code !== code);
+    await ref.set({ codes });
+    _loadCoupons();
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+// Client-side coupon redemption (called from account modal)
+async function redeemCoupon() {
+  const code = prompt('Enter your coupon code:');
+  if (!code) return;
+  const user = getLocalUser(); if (!user) return;
+  try {
+    const ref  = firebase.firestore().collection('config').doc('coupons');
+    const snap = await ref.get();
+    const codes = snap.data()?.codes || [];
+    const idx   = codes.findIndex(c => c.code === code.trim().toUpperCase());
+    if (idx === -1)              { showToastSafe('❌ Invalid coupon code.', '#DC2626'); return; }
+    if (codes[idx].usedBy)       { showToastSafe('❌ Coupon already used.', '#DC2626'); return; }
+    const days = codes[idx].days;
+    codes[idx].usedBy = user.uid;
+    await ref.set({ codes });
+    await setPremium(user.uid, 0); // grant days not months — patch:
+    const expiry = Math.max(_userRecord.premiumExpiry||Date.now(), Date.now()) + days*86400000;
+    _userRecord.premiumExpiry = expiry;
+    localStorage.setItem('userRecord_' + user.uid, JSON.stringify(_userRecord));
+    await firebase.firestore().collection('users').doc(user.uid).set({ premiumExpiry: expiry }, { merge: true });
+    updateUserBadge();
+    showToastSafe(`🎉 Coupon applied! ${days} days premium unlocked.`, '#7C3AED');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+// ── REFERRAL TRACKING ─────────────────────────────────────
+async function _loadReferrals() {
+  const el = document.getElementById('referral-stats'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('users').get();
+    const users = snap.docs.map(d => d.data());
+    const referred = users.filter(u => u.referredBy);
+    const topRefs = {};
+    referred.forEach(u => { topRefs[u.referredBy] = (topRefs[u.referredBy]||0) + 1; });
+    const sorted = Object.entries(topRefs).sort((a,b) => b[1]-a[1]).slice(0,5);
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#EFF6FF;border-radius:10px;padding:10px">
+          <div style="font-size:10px;color:#1E40AF;font-weight:600">Total Referred</div>
+          <div style="font-size:22px;font-weight:800;color:#1E40AF">${referred.length}</div>
+        </div>
+        <div style="background:#F0FDF4;border-radius:10px;padding:10px">
+          <div style="font-size:10px;color:#166534;font-weight:600">Top Referrers</div>
+          <div style="font-size:22px;font-weight:800;color:#166534">${sorted.length}</div>
+        </div>
+      </div>
+      ${sorted.length ? sorted.map((r,i)=>`
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:12px">
+          <span style="color:#1E293B">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${r[0]}</span>
+          <span style="font-weight:700;color:#059669">${r[1]} referrals</span>
+        </div>`).join('') : '<div style="color:#94A3B8;font-size:11px;padding-top:4px">No referrals yet. Add referredBy field to user docs.</div>'}
+    `;
+  } catch(e) { el.innerHTML = `<span style="color:#DC2626">${e.message}</span>`; }
+}
+
+// ── REVENUE TRACKER ───────────────────────────────────────
+async function adminAddRevenue() {
+  const amount = parseInt(document.getElementById('rev-amount')?.value||'0');
+  const note   = document.getElementById('rev-note')?.value||'';
+  if (!amount) { showToastSafe('Enter an amount', '#DC2626'); return; }
+  try {
+    const ref  = firebase.firestore().collection('config').doc('revenue');
+    const snap = await ref.get();
+    const entries = snap.exists ? (snap.data().entries||[]) : [];
+    entries.push({ amount, note, date: Date.now() });
+    await ref.set({ entries }, { merge: true });
+    document.getElementById('rev-amount').value = '';
+    document.getElementById('rev-note').value   = '';
+    showToastSafe('✅ Payment logged!', '#059669');
+    _loadRevenueSummary();
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function _loadRevenueSummary() {
+  const el = document.getElementById('revenue-summary'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('config').doc('revenue').get();
+    const entries = snap.exists ? (snap.data().entries||[]) : [];
+    const total = entries.reduce((s,e)=>s+(e.amount||0),0);
+    const now = Date.now();
+    const thisMonth = entries.filter(e => (now - e.date) < 30*86400000).reduce((s,e)=>s+(e.amount||0),0);
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#ECFDF5;border-radius:10px;padding:10px">
+          <div style="font-size:10px;color:#166534;font-weight:600">Total</div>
+          <div style="font-size:20px;font-weight:800;color:#166534">₹${total}</div>
+        </div>
+        <div style="background:#F0FDF4;border-radius:10px;padding:10px">
+          <div style="font-size:10px;color:#166534;font-weight:600">This Month</div>
+          <div style="font-size:20px;font-weight:800;color:#166534">₹${thisMonth}</div>
+        </div>
+      </div>
+      ${entries.slice().reverse().slice(0,5).map(e=>`
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F1F5F9;font-size:12px">
+          <span style="color:#64748B">${e.note||'Payment'} · ${_timeAgo(e.date)}</span>
+          <span style="font-weight:700;color:#059669">₹${e.amount}</span>
+        </div>`).join('')||'<div style="color:#94A3B8;font-size:11px">No entries yet.</div>'}
+    `;
+  } catch(e) { el.innerHTML = `<span style="color:#DC2626">${e.message}</span>`; }
+}
+
+// ── FEEDBACK INBOX ────────────────────────────────────────
+async function _loadFeedbackInbox() {
+  const el = document.getElementById('feedback-inbox'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('feedback').orderBy('date','desc').limit(10).get();
+    if (snap.empty) { el.innerHTML = '<div style="color:#94A3B8">No feedback yet.</div>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const f = d.data();
+      return `<div style="background:#F8FAFF;border-radius:10px;padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:700;color:#1E293B">${f.name||f.email||'User'}</span>
+          <span style="font-size:10px;color:#94A3B8">${_timeAgo(f.date)}</span>
+        </div>
+        <div style="font-size:12px;color:#374151;line-height:1.5">${f.message||'—'}</div>
+        ${f.rating ? `<div style="font-size:11px;color:#D97706;margin-top:4px">${'⭐'.repeat(f.rating)}</div>` : ''}
+        <button onclick="adminMarkFeedbackRead('${d.id}')" style="margin-top:6px;padding:3px 10px;background:#EEF2FF;color:#3730A3;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">Mark Read</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    // feedback collection might not exist or no index — show gracefully
+    el.innerHTML = '<div style="color:#94A3B8;font-size:11px">No feedback collection found.<br>Submit feedback from app to populate.</div>';
+  }
+}
+
+async function adminMarkFeedbackRead(id) {
+  try {
+    await firebase.firestore().collection('feedback').doc(id).set({ read: true }, { merge: true });
+    _loadFeedbackInbox();
+  } catch(e) {}
+}
+
+// ── FLAGGED QUESTIONS ─────────────────────────────────────
+async function _loadFlaggedQuestions() {
+  const el = document.getElementById('flagged-questions'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('flags').orderBy('date','desc').limit(10).get();
+    if (snap.empty) { el.innerHTML = '<div style="color:#94A3B8">No flags yet.</div>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const f = d.data();
+      const statusColor = f.status === 'resolved' ? '#059669' : '#D97706';
+      return `<div style="background:#FFFBEB;border-radius:10px;padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+          <div style="font-size:11px;font-weight:700;color:#92400E;flex:1;line-height:1.4">${(f.q||'').slice(0,80)}…</div>
+          <span style="font-size:10px;background:${f.status==='resolved'?'#ECFDF5':'#FFFBEB'};color:${statusColor};padding:2px 7px;border-radius:10px;white-space:nowrap;font-weight:700;border:1px solid ${statusColor}30">${f.status||'pending'}</span>
+        </div>
+        <div style="font-size:11px;color:#64748B;margin-top:3px">Reason: ${f.reason||'—'} · ${f.votes||1} vote(s)</div>
+        ${f.status !== 'resolved' ? `<button onclick="adminResolveFlag('${d.id}')" style="margin-top:6px;padding:3px 10px;background:#ECFDF5;color:#059669;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">✅ Mark Resolved</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#94A3B8;font-size:11px">No flags collection found. Flags submitted in the app will appear here.</div>';
+  }
+}
+
+async function adminResolveFlag(id) {
+  try {
+    await firebase.firestore().collection('flags').doc(id).set({ status: 'resolved' }, { merge: true });
+    _loadFlaggedQuestions();
+  } catch(e) {}
+}
+
+// ── QUIZ LEADERBOARD ─────────────────────────────────────
+async function _loadLeaderboard() {
+  const el = document.getElementById('quiz-leaderboard'); if (!el) return;
+  try {
+    const snap = await firebase.firestore().collection('users').get();
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => u.bestScore > 0 || u.totalQuestions > 0)
+      .sort((a,b) => (b.bestScore||0) - (a.bestScore||0))
+      .slice(0, 10);
+    if (!users.length) { el.innerHTML = '<div style="color:#94A3B8;font-size:11px">No quiz scores yet. Scores are stored when users complete quizzes.</div>'; return; }
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:10px;overflow:hidden">
+        ${users.map((u,i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #F1F5F9">
+            <span style="font-size:14px;width:20px">${['🥇','🥈','🥉'][i]||'#'+(i+1)}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:#1E293B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.name||(u.email||'').split('@')[0]}</div>
+              <div style="font-size:10px;color:#94A3B8">${u.totalQuestions||0} Qs attempted</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:14px;font-weight:800;color:#3730A3">${u.bestScore||0}%</div>
+              <div style="font-size:10px;color:#94A3B8">best</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { el.innerHTML = `<span style="color:#DC2626;font-size:11px">${e.message}</span>`; }
+}
+
+// ── SETTINGS TAB ──────────────────────────────────────────
+async function adminLoadSettings() {
+  const loadEl    = document.getElementById('settings-loading');
+  const contentEl = document.getElementById('settings-content');
+  if (!loadEl || !contentEl || contentEl.dataset.loaded) return;
+  loadEl.style.display    = 'block';
+  contentEl.style.display = 'none';
+
+  try {
+    const db   = firebase.firestore();
+    const snap = await db.collection('config').doc('appSettings').get();
+    const cfg  = snap.exists ? snap.data() : {};
+
+    loadEl.style.display    = 'none';
+    contentEl.style.display = 'block';
+    contentEl.dataset.loaded = '1';
+
+    contentEl.innerHTML = `
+      <!-- Announcement Banner -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#0891B2;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">📢 Announcement Banner</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:12px;color:#374151;font-weight:600">Show banner</span>
+          <label style="position:relative;width:40px;height:22px;cursor:pointer">
+            <input type="checkbox" id="cfg-banner-on" ${cfg.bannerEnabled?'checked':''} onchange="adminSaveSetting('bannerEnabled',this.checked)"
+              style="opacity:0;width:0;height:0;position:absolute">
+            <div id="cfg-banner-track" style="position:absolute;inset:0;border-radius:11px;background:${cfg.bannerEnabled?'#3730A3':'#CBD5E1'};transition:background .2s"></div>
+            <div style="position:absolute;top:3px;left:${cfg.bannerEnabled?'21px':'3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)" id="cfg-banner-thumb"></div>
+          </label>
+        </div>
+        <input id="cfg-banner-text" value="${cfg.bannerText||''}" placeholder="Banner message…"
+          style="width:100%;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <input id="cfg-banner-color" type="color" value="${cfg.bannerColor||'#1A237E'}" title="Banner color"
+            style="width:40px;height:36px;border:2px solid #E2E8F0;border-radius:8px;cursor:pointer;padding:2px">
+          <button onclick="adminSaveBanner()"
+            style="flex:1;padding:9px;background:#0891B2;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Save Banner</button>
+        </div>
+      </div>
+
+      <!-- Maintenance Mode -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🚧 Maintenance Mode</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:12px;color:#374151;font-weight:600">Enable maintenance</span>
+          <label style="position:relative;width:40px;height:22px;cursor:pointer">
+            <input type="checkbox" id="cfg-maint-on" ${cfg.maintenanceMode?'checked':''} onchange="adminSaveSetting('maintenanceMode',this.checked)"
+              style="opacity:0;width:0;height:0;position:absolute">
+            <div style="position:absolute;inset:0;border-radius:11px;background:${cfg.maintenanceMode?'#DC2626':'#CBD5E1'};transition:background .2s" id="cfg-maint-track"></div>
+            <div style="position:absolute;top:3px;left:${cfg.maintenanceMode?'21px':'3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s" id="cfg-maint-thumb"></div>
+          </label>
+        </div>
+        <input id="cfg-maint-msg" value="${cfg.maintenanceMessage||''}" placeholder="Message shown to users…"
+          style="width:100%;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
+        <button onclick="adminSaveMaintenance()"
+          style="width:100%;padding:9px;background:#DC2626;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Save</button>
+      </div>
+
+      <!-- Force Update -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">📦 Force Update</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="cfg-min-version" value="${cfg.minVersion||''}" placeholder="Min version e.g. 1.0.3"
+            style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+          <input id="cfg-update-url" value="${cfg.updateUrl||''}" placeholder="APK URL"
+            style="flex:1;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none">
+        </div>
+        <button onclick="adminSaveForceUpdate()"
+          style="width:100%;padding:9px;background:#D97706;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Save Force Update</button>
+        <div style="font-size:11px;color:#94A3B8;margin-top:6px">Users on versions below minVersion will see a mandatory update screen.</div>
+      </div>
+
+      <!-- A/B Test Flags -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">🧪 A/B Test Flags</div>
+        ${['newOnboarding','timerVariant','paywallV2','darkModeTest'].map(flag => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F8FAFF">
+            <span style="font-size:12px;font-family:monospace;color:#374151">${flag}</span>
+            <label style="position:relative;width:36px;height:20px;cursor:pointer">
+              <input type="checkbox" ${(cfg.abFlags||{})[flag]?'checked':''} onchange="adminToggleABFlag('${flag}',this.checked)"
+                style="opacity:0;width:0;height:0;position:absolute">
+              <div style="position:absolute;inset:0;border-radius:10px;background:${(cfg.abFlags||{})[flag]?'#7C3AED':'#CBD5E1'};transition:background .2s"></div>
+              <div style="position:absolute;top:2px;left:${(cfg.abFlags||{})[flag]?'18px':'2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+            </label>
+          </div>`).join('')}
+        <div style="font-size:11px;color:#94A3B8;margin-top:8px">Read via <code>config/appSettings.abFlags.flagName</code> in app.</div>
+      </div>
+
+      <!-- Trial Expiry Reminder -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#0891B2;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">⏰ Trial Expiry Reminders</div>
+        <div style="font-size:12px;color:#374151;margin-bottom:10px;line-height:1.6">
+          Send a Firestore notification document to users whose trial expires within 2 days.
+          The app reads <code>notifications/{uid}</code> and shows a toast on next open.
+        </div>
+        <button onclick="adminSendTrialReminders()"
+          style="width:100%;padding:10px;background:#0891B2;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">
+          🔔 Send Trial Expiry Reminders Now
+        </button>
+        <div id="reminder-result" style="margin-top:8px;font-size:12px"></div>
+      </div>
+
+      <!-- Featured Question Editor -->
+      <div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">⭐ Featured Question of the Day</div>
+        <textarea id="cfg-featured-q" placeholder="Question text…" rows="2"
+          style="width:100%;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;resize:vertical;margin-bottom:6px">${cfg.featuredQuestion?.q||''}</textarea>
+        <input id="cfg-featured-ans" value="${cfg.featuredQuestion?.ans||''}" placeholder="Correct answer"
+          style="width:100%;padding:9px 11px;border:2px solid #E2E8F0;border-radius:9px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
+        <button onclick="adminSaveFeaturedQuestion()"
+          style="width:100%;padding:9px;background:#059669;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Save Featured Question</button>
+      </div>
+      <div style="height:12px"></div>
+    `;
+  } catch(e) {
+    loadEl.innerHTML = `<div style="color:#DC2626;font-size:13px">❌ ${e.message}</div>`;
+  }
+}
+
+// ── SETTINGS SAVERS ───────────────────────────────────────
+async function adminSaveSetting(key, value) {
+  try {
+    await firebase.firestore().collection('config').doc('appSettings').set({ [key]: value }, { merge: true });
+    // update toggle visuals
+    const trackId = key === 'bannerEnabled' ? 'cfg-banner-track' : key === 'maintenanceMode' ? 'cfg-maint-track' : null;
+    const thumbId = key === 'bannerEnabled' ? 'cfg-banner-thumb' : key === 'maintenanceMode' ? 'cfg-maint-thumb' : null;
+    if (trackId) {
+      const color = key === 'maintenanceMode' ? '#DC2626' : '#3730A3';
+      document.getElementById(trackId).style.background = value ? color : '#CBD5E1';
+      document.getElementById(thumbId).style.left = value ? '21px' : '3px';
+    }
+    showToastSafe(value ? '✅ Enabled' : '✅ Disabled', '#059669');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminSaveBanner() {
+  const text  = document.getElementById('cfg-banner-text')?.value||'';
+  const color = document.getElementById('cfg-banner-color')?.value||'#1A237E';
+  const on    = document.getElementById('cfg-banner-on')?.checked || false;
+  try {
+    await firebase.firestore().collection('config').doc('appSettings').set(
+      { bannerText: text, bannerColor: color, bannerEnabled: on }, { merge: true });
+    showToastSafe('✅ Banner saved!', '#0891B2');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminSaveMaintenance() {
+  const msg = document.getElementById('cfg-maint-msg')?.value||'';
+  const on  = document.getElementById('cfg-maint-on')?.checked || false;
+  try {
+    await firebase.firestore().collection('config').doc('appSettings').set(
+      { maintenanceMode: on, maintenanceMessage: msg }, { merge: true });
+    showToastSafe('✅ Maintenance settings saved!', '#DC2626');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminSaveForceUpdate() {
+  const minVersion = document.getElementById('cfg-min-version')?.value||'';
+  const updateUrl  = document.getElementById('cfg-update-url')?.value||'';
+  try {
+    await firebase.firestore().collection('config').doc('appSettings').set(
+      { minVersion, updateUrl }, { merge: true });
+    showToastSafe('✅ Force update saved!', '#D97706');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminToggleABFlag(flag, value) {
+  try {
+    const ref  = firebase.firestore().collection('config').doc('appSettings');
+    const snap = await ref.get();
+    const abFlags = (snap.data()?.abFlags) || {};
+    abFlags[flag] = value;
+    await ref.set({ abFlags }, { merge: true });
+    showToastSafe(`🧪 ${flag} = ${value}`, '#7C3AED');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+async function adminSendTrialReminders() {
+  const resultEl = document.getElementById('reminder-result');
+  if (resultEl) { resultEl.style.color='#0891B2'; resultEl.textContent = 'Sending…'; }
+  try {
+    const db  = firebase.firestore();
+    const now = Date.now();
+    const snap = await db.collection('users').get();
+    const expiringSoon = snap.docs
+      .map(d => ({ uid: d.id, ...d.data() }))
+      .filter(u => {
+        if ((u.premiumExpiry||0) > now) return false; // already premium
+        const left = (u.trialStart||0) + 7*86400000 - now;
+        return left > 0 && left < 2*86400000; // expires within 2 days
+      });
+    const batch = db.batch();
+    expiringSoon.forEach(u => {
+      const ref = db.collection('notifications').doc(u.uid);
+      batch.set(ref, {
+        type: 'trialExpiry',
+        message: `⚠️ Your free trial expires in less than 2 days! Upgrade to keep access.`,
+        createdAt: now, read: false
+      }, { merge: true });
+    });
+    await batch.commit();
+    const msg = `✅ Sent to ${expiringSoon.length} user(s)`;
+    if (resultEl) { resultEl.style.color='#059669'; resultEl.textContent = msg; }
+    showToastSafe(msg, '#0891B2');
+  } catch(e) {
+    if (resultEl) { resultEl.style.color='#DC2626'; resultEl.textContent = '❌ ' + e.message; }
+  }
+}
+
+async function adminSaveFeaturedQuestion() {
+  const q   = document.getElementById('cfg-featured-q')?.value||'';
+  const ans = document.getElementById('cfg-featured-ans')?.value||'';
+  if (!q) { showToastSafe('Enter a question', '#DC2626'); return; }
+  try {
+    await firebase.firestore().collection('config').doc('appSettings').set(
+      { featuredQuestion: { q, ans, date: Date.now() } }, { merge: true });
+    showToastSafe('✅ Featured question saved!', '#059669');
+  } catch(e) { showToastSafe('❌ ' + e.message, '#DC2626'); }
+}
+
+// ── APP STARTUP: read banner + maintenance + force-update ─
+async function _checkAppConfig() {
+  try {
+    const db   = firebase.firestore();
+    const snap = await db.collection('config').doc('appSettings').get();
+    if (!snap.exists) return;
+    const cfg = snap.data();
+
+    // Maintenance mode
+    if (cfg.maintenanceMode) {
+      _showMaintenanceScreen(cfg.maintenanceMessage || 'App is under maintenance. Please check back soon.');
+      return;
+    }
+
+    // Force update check
+    if (cfg.minVersion && typeof APP_CURRENT_VERSION !== 'undefined') {
+      const toNum = v => v.split('.').map(n=>parseInt(n)).reduce((a,b)=>a*1000+b, 0);
+      if (toNum(APP_CURRENT_VERSION) < toNum(cfg.minVersion)) {
+        _showForceUpdateScreen(cfg.updateUrl || '');
+        return;
+      }
+    }
+
+    // Announcement banner
+    if (cfg.bannerEnabled && cfg.bannerText) {
+      _showAnnouncementBanner(cfg.bannerText, cfg.bannerColor || '#1A237E');
+    }
+
+    // Notification toast for current user
+    const user = getLocalUser();
+    if (user) {
+      const notifSnap = await db.collection('notifications').doc(user.uid).get();
+      if (notifSnap.exists && !notifSnap.data().read) {
+        setTimeout(() => {
+          showToastSafe(notifSnap.data().message, '#0891B2');
+          db.collection('notifications').doc(user.uid).set({ read: true }, { merge: true });
+        }, 2000);
+      }
+    }
+  } catch(e) { console.warn('Config check failed:', e); }
+}
+
+function _showMaintenanceScreen(msg) {
+  if (document.getElementById('maintenance-screen')) return;
+  const el = document.createElement('div');
+  el.id = 'maintenance-screen';
+  el.style.cssText = 'position:fixed;inset:0;background:#1A237E;z-index:9999999;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center';
+  el.innerHTML = `
+    <div style="color:#fff">
+      <div style="font-size:56px;margin-bottom:20px">🚧</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:12px">Under Maintenance</div>
+      <div style="font-size:14px;opacity:.8;max-width:280px;line-height:1.6">${msg}</div>
+      <div style="font-size:12px;opacity:.5;margin-top:20px">MP GK Portal</div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function _showForceUpdateScreen(url) {
+  if (document.getElementById('force-update-screen')) return;
+  const el = document.createElement('div');
+  el.id = 'force-update-screen';
+  el.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:9999999;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center';
+  el.innerHTML = `
+    <div>
+      <div style="font-size:56px;margin-bottom:20px">📦</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1A237E;margin-bottom:12px">Update Required</div>
+      <div style="font-size:14px;color:#64748B;margin-bottom:24px;line-height:1.6">A new version of the app is required to continue. Please update to the latest version.</div>
+      ${url ? `<a href="${url}" style="display:block;padding:14px;background:#1A237E;color:#fff;border-radius:12px;font-weight:700;text-decoration:none;font-size:15px">⬇️ Download Update</a>` : ''}
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function _showAnnouncementBanner(text, color) {
+  if (document.getElementById('announcement-banner')) return;
+  const el = document.createElement('div');
+  el.id = 'announcement-banner';
+  el.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:99998;background:${color};color:#fff;padding:10px 44px 10px 14px;font-size:13px;font-weight:600;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)`;
+  el.innerHTML = `${text}<button onclick="document.getElementById('announcement-banner').remove()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0;line-height:1">×</button>`;
+  document.body.prepend(el);
+}
+
+
 // ── SIGN OUT ──────────────────────────────────────────────
 async function _signOut() {
   try { if (firebaseAuth) await firebaseAuth.signOut(); } catch(e) {}
