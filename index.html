@@ -6,14 +6,39 @@
 <title>MP GK Portal 2026 — MPPSC Complete Prep</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<!-- Razorpay -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+.lang-toggle-pill{display:flex;align-items:center;gap:8px;margin:8px 12px 4px;background:rgba(255,255,255,.1);border-radius:10px;padding:9px 12px;cursor:pointer}
+.lang-toggle-pill .lt-label{font-size:12px;color:rgba(255,255,255,.85);font-weight:600;flex:1}
+.lang-toggle-pill .lt-badge{font-size:10px;background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700}
+.page-hero{border-radius:var(--radius);padding:22px 20px;margin-bottom:16px;color:#fff}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);gap:12px}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+.setting-desc{font-size:12px;color:var(--muted)}
+.switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:12px;transition:.2s}
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input:checked+.slider{background:#1A237E}
+input:checked+.slider:before{transform:translateX(20px)}
+.nav-badge.new-badge{background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff}
+.syl-paper{background:var(--navy);color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:8px;font-weight:700;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.syl-subject{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;margin-left:12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;justify-content:space-between}
+.syl-topics{margin-left:24px;margin-bottom:6px;display:none}
+.syl-topic{font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border)}
+.ca-item{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:14px;margin-bottom:10px}
+.ca-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-bottom:6px}
+.ca-tag.national{background:#EEF2FF;color:#3730A3}
+.ca-tag.mp{background:#FFF7ED;color:#C2410C}
+.ca-tag.international{background:#F0FDF4;color:#166534}
+</style>
 </head>
 <body>
+
 <!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
 <div class="logo">
@@ -25,24 +50,44 @@
 <button class="sidebar-close" onclick="toggleSidebar()" title="Close menu">✕</button>
 </div>
 </div>
+
+<!-- Language Toggle -->
+<div class="lang-toggle-pill" onclick="i18n.toggle()">
+  <span style="font-size:16px">🌐</span>
+  <span class="lt-label" id="lang-label">Switch to Hindi / हिंदी</span>
+  <span class="lt-badge" id="lang-badge">EN</span>
+</div>
+
 <div class="nav-section">Study</div>
 <div class="nav-item active" onclick="showPage('dashboard')"><span class="ni">🏠</span>Dashboard</div>
+<div class="nav-item" onclick="showPage('syllabus')"><span class="ni">📋</span>Full Syllabus<span class="nav-badge new-badge">NEW</span></div>
 <div class="nav-item" onclick="showPage('notes')"><span class="ni">📖</span>Notes<span class="nav-badge">15</span></div>
 <div class="nav-item" onclick="showPage('flashcards')"><span class="ni">🃏</span>Flashcards</div>
+
 <div class="nav-section">Practice</div>
 <div class="nav-item" onclick="showPage('test')"><span class="ni">✏️</span>MCQ Test<span class="nav-badge">421</span></div>
 <div class="nav-item" onclick="showPage('daily')"><span class="ni">📅</span>Daily 10</div>
 <div class="nav-item" onclick="showPage('timed')"><span class="ni">⏱️</span>Timed Mock</div>
+<div class="nav-item" onclick="showPage('srsreview')"><span class="ni">🧠</span>Smart Review<span class="nav-badge new-badge" id="srs-count-badge" style="display:none">0</span></div>
+
 <div class="nav-section">Resources</div>
 <div class="nav-item" onclick="showPage('pyq')"><span class="ni">📄</span>PYQ Papers<span class="nav-badge">4yr</span></div>
 <div class="nav-item" onclick="showPage('maps')"><span class="ni">🗺️</span>Map Quiz</div>
+<div class="nav-item" onclick="showPage('currentaffairs')"><span class="ni">📰</span>Current Affairs<span class="nav-badge new-badge">NEW</span></div>
+<div class="nav-item" onclick="showPage('bookmarkspage')"><span class="ni">🔖</span>Bookmarks<span class="nav-badge" id="bookmark-count-badge" style="display:none">0</span></div>
+
+<div class="nav-section">Analytics</div>
 <div class="nav-item" onclick="showPage('weakareas')"><span class="ni">📊</span>Weak Areas</div>
 <div class="nav-item" onclick="showPage('progress')"><span class="ni">📈</span>My Progress</div>
+
+<div class="nav-section">More</div>
 <div class="nav-item" onclick="showPage('donate')"><span class="ni">❤️</span>Support Us</div>
+<div class="nav-item" onclick="showPage('settings')"><span class="ni">⚙️</span>Settings<span class="nav-badge new-badge">NEW</span></div>
 <div class="nav-item" onclick="showPage('review')" style="display:none">
-<span class="ni">🚩</span>Review Flags
-<span class="nav-badge" id="flag-count-badge" style="background:#DC2626;color:#fff;display:none">0</span>
+  <span class="ni">🚩</span>Review Flags
+  <span class="nav-badge" id="flag-count-badge" style="background:#DC2626;color:#fff;display:none">0</span>
 </div>
+
 <div class="nav-bottom">
 <div class="streak-pill">
 <span class="streak-fire">🔥</span>
@@ -53,6 +98,7 @@
 </div>
 </div>
 </nav>
+
 <main class="main">
 <div class="topbar">
 <div style="display:flex;align-items:center;gap:10px">
@@ -66,6 +112,7 @@
 <div class="search-box" onclick="showToast('Search: use browser Ctrl+F on Notes page')">🔍 Search...</div>
 </div>
 </div>
+
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dashboard">
 <div class="grid-4">
@@ -88,6 +135,7 @@
 <div class="card"><div class="sec-hd"><div class="sec-title">Weak Areas</div><div class="sec-link" onclick="showPage('weakareas')">See All →</div></div><div id="dash-weak"></div></div>
 </div>
 </div>
+
 <!-- ═══ NOTES ═══ -->
 <div class="page" id="page-notes">
 <div class="notes-layout">
@@ -95,14 +143,13 @@
 <div id="notes-content-area"></div>
 </div>
 </div>
+
 <!-- ═══ FLASHCARDS ═══ -->
 <div class="page" id="page-flashcards">
 <div class="flash-wrap">
 <div class="card" style="margin-bottom:16px">
 <div class="sec-hd"><div class="sec-title">Flashcard Mode</div></div>
-<div class="chip-row" id="flash-filter">
-<div class="chip chip-all on" onclick="flashChipAll(this)">All Chapters</div>
-</div>
+<div class="chip-row" id="flash-filter"><div class="chip chip-all on" onclick="flashChipAll(this)">All Chapters</div></div>
 <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
 <div id="flash-count-info" style="font-size:13px;color:var(--muted)">421 cards selected</div>
 <button class="btn-primary" style="width:auto;padding:9px 22px" onclick="startFlash()">Start Flashcards →</button>
@@ -127,6 +174,7 @@
 </div>
 </div>
 </div>
+
 <!-- ═══ MCQ TEST ═══ -->
 <div class="page" id="page-test">
 <div id="test-home-scr">
@@ -140,6 +188,15 @@
 <div class="mode-card" onclick="selMode(this,25)"><div class="mode-icon">🎯</div><div class="mode-name">Quick — 25 Qs</div><div class="mode-desc">Random · ~15 min</div></div>
 </div>
 </div>
+<!-- Question language selector -->
+<div class="card" style="margin-bottom:14px">
+<div class="sec-hd"><div class="sec-title">प्रश्न भाषा / Question Language</div></div>
+<div style="display:flex;gap:8px">
+<button id="qlang-en" onclick="setQLang('en')" style="flex:1;padding:9px;background:#1A237E;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">🇬🇧 English</button>
+<button id="qlang-hi" onclick="setQLang('hi')" style="flex:1;padding:9px;background:#F1F5F9;color:#64748B;border:1.5px solid #E2E8F0;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">🇮🇳 हिंदी</button>
+</div>
+<div id="qlang-hi-status" style="font-size:11px;color:var(--muted);margin-top:8px">Hindi files: checking...</div>
+</div>
 <div class="card" style="margin-bottom:14px">
 <div class="sec-hd"><div class="sec-title">Filter by Chapter</div><button class="btn-ghost" onclick="selectAllChaps()">Select All</button></div>
 <div class="chip-row" id="ch-filter-chips"></div>
@@ -151,6 +208,8 @@
 <button class="btn-primary" onclick="startTest(false)">Start Test →</button>
 </div>
 </div>
+
+<!-- Question screen -->
 <div id="test-q-scr" style="display:none;max-width:720px;margin:0 auto">
 <div class="q-header">
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -158,10 +217,12 @@
 <span class="q-num-pill" id="q-num-badge">Q1</span>
 <span class="q-upd" id="q-upd-badge" style="display:none">Updated 2026</span>
 </div>
-<div style="display:flex;align-items:center;gap:8px">
-  <span id="q-info-text" style="font-size:12px;color:var(--muted)">1/421</span>
-  <button onclick="_confirmQuitQuiz()" title="Quit quiz"
-    style="background:#FEF2F2;border:1.5px solid #FCA5A5;color:#DC2626;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✕ Quit</button>
+<div style="display:flex;align-items:center;gap:6px">
+<span id="q-info-text" style="font-size:12px;color:var(--muted)">1/421</span>
+<button onclick="toggleQBookmark()" id="btn-bookmark" title="Bookmark"
+  style="background:#FFF7ED;border:1.5px solid #FCD34D;color:#D97706;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">🔖</button>
+<button onclick="_confirmQuitQuiz()"
+  style="background:#FEF2F2;border:1.5px solid #FCA5A5;color:#DC2626;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✕ Quit</button>
 </div>
 </div>
 <div class="pbar"><div class="pfill" id="q-pfill" style="width:.2%"></div></div>
@@ -186,6 +247,8 @@
 <button class="btn-flag" id="btn-flag" onclick="flagQuestion()">🚩 Flag for Review</button>
 </div>
 </div>
+
+<!-- Results -->
 <div id="test-result-scr" style="display:none;max-width:680px;margin:0 auto">
 <div class="card result-big">
 <div style="font-size:32px;margin-bottom:8px">🏆</div>
@@ -209,18 +272,17 @@
 </div>
 </div>
 <div id="review-answers-section" style="display:none;margin-top:16px">
-<div class="sec-hd">
-<div class="sec-title">Answer Review</div>
+<div class="sec-hd"><div class="sec-title">Answer Review</div>
 <div style="display:flex;gap:6px">
 <button class="btn-ghost" id="rf-all" onclick="filterReview('all')" style="border-color:var(--navy);color:var(--navy)">All</button>
 <button class="btn-ghost" id="rf-wrong" onclick="filterReview('wrong')">Wrong</button>
 <button class="btn-ghost" id="rf-unsure" onclick="filterReview('unsure')">Unsure</button>
-</div>
-</div>
+</div></div>
 <div id="review-list-container"></div>
 </div>
 </div>
 </div>
+
 <!-- ═══ DAILY 10 ═══ -->
 <div class="page" id="page-daily">
 <div style="max-width:500px">
@@ -239,6 +301,7 @@
 </div>
 </div>
 </div>
+
 <!-- ═══ TIMED MOCK ═══ -->
 <div class="page" id="page-timed">
 <div style="max-width:580px;margin:0 auto" id="timed-home">
@@ -277,6 +340,7 @@
 </div>
 </div>
 </div>
+
 <!-- ═══ PYQ PAPERS ═══ -->
 <div class="page" id="page-pyq">
 <div class="pyq-year-tabs">
@@ -288,16 +352,17 @@
 </div>
 <div class="card" style="margin-bottom:14px;background:#EEF0FF;border-color:#C5CAE9">
 <div style="font-size:13px;color:var(--navy);font-weight:600">📋 About PYQ Section</div>
-<div style="font-size:12px;color:var(--muted);margin-top:4px">2021 papers have full MCQ practice (100 Qs each). Click <b>Practice MCQs</b> to attempt questions here, or <b>Download</b> to get the official PDF. 2021 Paper 1 (General Studies) and Paper 2 (Aptitude & GS-II) are fully available.</div>
+<div style="font-size:12px;color:var(--muted);margin-top:4px">2021 papers have full MCQ practice (100 Qs each). Click <b>Practice MCQs</b> to attempt questions here, or <b>Download</b> to get the official PDF.</div>
 </div>
 <div id="pyq-list"></div>
 </div>
+
 <!-- ═══ MAP QUIZ ═══ -->
 <div class="page" id="page-maps">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
 <div>
 <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800">🗺️ Map Quiz</div>
-<div style="font-size:12px;color:var(--muted)">India states · MP divisions · MP districts — MCQ & typing modes</div>
+<div style="font-size:12px;color:var(--muted)">India states · MP divisions · MP districts</div>
 </div>
 <button onclick="openMapFullscreen()" style="padding:9px 18px;background:var(--navy);color:#fff;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none">⛶ Full Screen</button>
 </div>
@@ -305,17 +370,12 @@
 <iframe src="maps.html" style="width:100%;height:75vh;border:none;display:block" id="map-iframe"></iframe>
 </div>
 </div>
+
 <!-- ═══ WEAK AREAS ═══ -->
 <div class="page" id="page-weakareas">
 <div class="grid-2">
-<div class="card">
-<div class="sec-hd"><div class="sec-title">Chapter-wise Accuracy</div></div>
-<div id="weak-list-full"></div>
-</div>
-<div class="card">
-<div class="sec-hd"><div class="sec-title">Improvement Suggestions</div></div>
-<div id="weak-suggestions" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
-</div>
+<div class="card"><div class="sec-hd"><div class="sec-title">Chapter-wise Accuracy</div></div><div id="weak-list-full"></div></div>
+<div class="card"><div class="sec-hd"><div class="sec-title">Improvement Suggestions</div></div><div id="weak-suggestions" style="font-size:13px;color:var(--muted);line-height:1.8"></div></div>
 </div>
 <div class="card">
 <div class="sec-hd"><div class="sec-title">Smart Revision Mode</div><div style="font-size:12px;color:var(--muted)">Only your previously wrong questions</div></div>
@@ -323,6 +383,7 @@
 <button class="btn-primary" style="width:auto;padding:10px 22px" onclick="startSmartRevision()">Start Smart Revision →</button>
 </div>
 </div>
+
 <!-- ═══ PROGRESS ═══ -->
 <div class="page" id="page-progress">
 <div class="grid-4" id="prog-stats"></div>
@@ -331,11 +392,9 @@
 <div class="heatmap-grid" id="heatmap2"></div>
 <div class="hm-legend">Less <span class="hm-cell hm-0"></span><span class="hm-cell hm-1"></span><span class="hm-cell hm-2"></span><span class="hm-cell hm-3"></span><span class="hm-cell hm-4"></span> More</div>
 </div>
-<div class="card">
-<div class="sec-hd"><div class="sec-title">Chapter Progress Rings</div></div>
-<div class="rings-grid" id="progress-rings"></div>
+<div class="card"><div class="sec-hd"><div class="sec-title">Chapter Progress Rings</div></div><div class="rings-grid" id="progress-rings"></div></div>
 </div>
-</div>
+
 <!-- ═══ REVIEW FLAGS ═══ -->
 <div class="page" id="page-review">
 <div class="grid-3" style="margin-bottom:20px">
@@ -344,14 +403,12 @@
 <div class="stat-card"><div class="stat-accent" style="background:var(--success)"></div><div class="stat-lbl">Resolved</div><div class="stat-val" id="rev-resolved">0</div></div>
 </div>
 <div class="card">
-<div class="sec-hd">
-<div class="sec-title">Flagged Questions</div>
-<div style="font-size:12px;color:var(--muted)">Community-reported · Admin can mark resolved</div>
-</div>
+<div class="sec-hd"><div class="sec-title">Flagged Questions</div><div style="font-size:12px;color:var(--muted)">Community-reported · Admin can mark resolved</div></div>
 <div id="flags-list"></div>
 </div>
 </div>
-<!-- FLAG MODAL — using fixed positioning properly -->
+
+<!-- FLAG MODAL -->
 <div id="flag-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center">
 <div style="background:#fff;border-radius:16px;padding:26px;max-width:460px;width:calc(100% - 40px);margin:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
 <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:5px">🚩 Flag for Review</div>
@@ -360,8 +417,8 @@
 <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text)">Reason:</div>
 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
 <label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="wrong_answer" checked> Wrong correct answer marked</label>
-<label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="outdated"> Outdated information (2026 update needed)</label>
-<label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="confusing"> Confusing or ambiguous question</label>
+<label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="outdated"> Outdated information</label>
+<label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="confusing"> Confusing or ambiguous</label>
 <label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer"><input type="radio" name="fr" value="typo"> Spelling or typo error</label>
 </div>
 <textarea id="flag-note" placeholder="Additional details (optional)..." style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical;min-height:68px;margin-bottom:14px;background:var(--bg);color:var(--text)"></textarea>
@@ -371,69 +428,188 @@
 </div>
 </div>
 </div>
-<!-- ═══ DONATE PAGE ═══ -->
+
+<!-- ═══ DONATE ═══ -->
 <div class="page" id="page-donate">
-
-  <!-- Hero -->
-  <div style="background:var(--navy);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:20px;color:#fff">
-    <div style="font-size:44px;margin-bottom:10px">❤️</div>
-    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Support MP GK Portal</div>
-    <div style="font-size:13px;opacity:.75;line-height:1.6">Built with love for MPPSC aspirants across Madhya Pradesh.<br>Your support keeps it free and growing!</div>
-  </div>
-
-  <!-- UPI -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="sec-title" style="margin-bottom:14px">Pay via UPI</div>
-    <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:8px">Send to UPI ID</div>
-    <div onclick="dnCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:0">
-      <div id="dn-upi-txt" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px">padhleyrr@upi</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">MP GK Portal — PadhleYrr</div>
-      <div style="font-size:12px;color:var(--saff);margin-top:5px;font-weight:600">📋 Tap to copy</div>
-    </div>
-  </div>
-
-  <!-- QR -->
-  <div class="card" style="margin-bottom:16px;text-align:center">
-    <div class="sec-title" style="margin-bottom:14px;text-align:left">Scan QR Code</div>
-    <!-- Replace the div below with <img src="upi-qr.png" style="width:180px;border-radius:12px"> once you have the QR image -->
-    <div style="width:180px;height:180px;background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;margin:0 auto 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:12px;gap:6px">
-      <span style="font-size:30px">📱</span>
-      <span>Add UPI QR image here</span>
-      <span style="font-size:10px">Replace with upi-qr.png</span>
-    </div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.7">Open any UPI app → Scan → Enter amount → Pay<br>Works with GPay, PhonePe, Paytm, BHIM &amp; all UPI apps</div>
-  </div>
-
-  <div style="text-align:center;font-size:12px;color:var(--muted);line-height:1.8;padding:8px 0 20px">
-    🙏 Thank you for supporting MPPSC aspirants across Madhya Pradesh!<br>
-    Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP
-  </div>
-
+<div style="background:var(--navy);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:20px;color:#fff">
+<div style="font-size:44px;margin-bottom:10px">❤️</div>
+<div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Support MP GK Portal</div>
+<div style="font-size:13px;opacity:.75;line-height:1.6">Built with love for MPPSC aspirants across Madhya Pradesh.<br>Your support keeps it free and growing!</div>
+</div>
+<div class="card" style="margin-bottom:16px">
+<div class="sec-title" style="margin-bottom:14px">Pay via UPI</div>
+<div onclick="dnCopyUPI()" style="background:#F0F4FF;border:2px dashed #93B4F4;border-radius:12px;padding:16px;text-align:center;cursor:pointer">
+<div id="dn-upi-txt" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy)">padhleyrr@upi</div>
+<div style="font-size:11px;color:var(--muted);margin-top:3px">MP GK Portal — PadhleYrr</div>
+<div style="font-size:12px;color:var(--saff);margin-top:5px;font-weight:600">📋 Tap to copy</div>
+</div>
+</div>
+<div class="card" style="margin-bottom:16px;text-align:center">
+<div class="sec-title" style="margin-bottom:14px;text-align:left">Scan QR Code</div>
+<img src="upi-qr.png" style="width:180px;border-radius:12px" onerror="this.parentElement.style.display='none'">
+<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-top:8px">Open any UPI app → Scan → Pay<br>Works with GPay, PhonePe, Paytm, BHIM</div>
+</div>
+<div style="text-align:center;font-size:12px;color:var(--muted);line-height:1.8;padding:8px 0 20px">
+🙏 Thank you for supporting MPPSC aspirants!<br>Made with ❤️ by <b>PadhleYrr</b> from Jabalpur, MP
+</div>
 </div>
 
-<script>
-(function(){
-  var UPI='padhleyrr@upi';
-  window.dnSetAmt=function(v,btn){
-    document.getElementById('dn-amt-input').value=v;
-    document.querySelectorAll('.dn-amt').forEach(function(b){b.style.borderColor='var(--border)';b.style.background='#fff';b.style.color='var(--text)';});
-    btn.style.borderColor='var(--navy)';btn.style.background='#EEF2FF';btn.style.color='var(--navy)';
-  };
-  function getAmt(){return parseInt(document.getElementById('dn-amt-input').value)||21;}
-  window.dnCopyUPI=function(){
-    var el=document.getElementById('dn-upi-txt');
-    var orig=el.textContent;
-    if(navigator.clipboard){navigator.clipboard.writeText(UPI).then(function(){el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);});}
-    else{var t=document.createElement('textarea');t.value=UPI;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);}
-  };
-  window.dnGPay=function(){var a=getAmt();window.location.href='tez://upi/pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
-  window.dnPhonePe=function(){var a=getAmt();window.location.href='phonepe://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
-  window.dnPaytm=function(){var a=getAmt();window.location.href='paytmmp://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';setTimeout(function(){window.location.href='upi://pay?pa='+UPI+'&pn=MPGKPortal&am='+a+'&cu=INR';},1500);};
-})();
-</script>
+<!-- ═══ FULL SYLLABUS (NEW) ═══ -->
+<div class="page" id="page-syllabus">
+<div style="max-width:800px;margin:0 auto">
+<div class="page-hero" style="background:linear-gradient(135deg,#1A237E,#283593)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="font-size:32px">📋</div>
+<div>
+<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Complete MPPSC Syllabus</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Paper 1 (GS) + Paper 2 (CSAT) + Paper 3 (MP GK)</div>
+</div>
+</div>
+</div>
+<div id="syllabus-tree"></div>
+</div>
+</div>
+
+<!-- ═══ SMART REVIEW / SRS (NEW) ═══ -->
+<div class="page" id="page-srsreview">
+<div style="max-width:700px;margin:0 auto">
+<div class="page-hero" style="background:linear-gradient(135deg,#4A148C,#7B1FA2)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="font-size:32px">🧠</div>
+<div>
+<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Smart Review (SRS)</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Wrong questions come back at 1→3→7→14→30 day intervals</div>
+</div>
+</div>
+</div>
+<div class="grid-4" id="srs-stats-grid" style="margin-bottom:16px"></div>
+<div id="srs-review-area">
+<div class="card" style="text-align:center;padding:32px">
+<div style="font-size:40px;margin-bottom:12px">🧠</div>
+<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">No reviews due today</div>
+<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Complete MCQ tests and get questions wrong — they'll appear here for spaced repetition review.</div>
+<button class="btn-primary" style="width:auto;padding:10px 24px" onclick="showPage('test')">Go Practice →</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ═══ BOOKMARKS (NEW) ═══ -->
+<div class="page" id="page-bookmarkspage">
+<div style="max-width:700px;margin:0 auto">
+<div class="card">
+<div class="sec-hd">
+<div class="sec-title">🔖 Bookmarked Questions</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:13px;color:var(--muted)" id="bookmark-total-count">0 saved</span>
+<button onclick="clearAllBookmarks()" style="font-size:11px;color:var(--danger);background:none;border:none;cursor:pointer;font-weight:600">Clear All</button>
+</div>
+</div>
+<div id="bookmarks-list" style="font-size:13px;color:var(--muted);padding:16px 0;text-align:center">
+No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
+</div>
+</div>
+</div>
+</div>
+
+<!-- ═══ CURRENT AFFAIRS (NEW) ═══ -->
+<div class="page" id="page-currentaffairs">
+<div style="max-width:700px;margin:0 auto">
+<div class="page-hero" style="background:linear-gradient(135deg,#E65100,#FF6D00)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="font-size:32px">📰</div>
+<div>
+<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800" id="ca-month-title">Current Affairs</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Daily · National · International · MP Special</div>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+<button onclick="filterCA('all')"           id="ca-tab-all"           style="padding:7px 14px;background:#1A237E;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">All</button>
+<button onclick="filterCA('national')"      id="ca-tab-national"      style="padding:7px 14px;background:#F1F5F9;color:#64748B;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🏛 National</button>
+<button onclick="filterCA('mp')"            id="ca-tab-mp"            style="padding:7px 14px;background:#F1F5F9;color:#64748B;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🏙 MP Special</button>
+<button onclick="filterCA('international')" id="ca-tab-international" style="padding:7px 14px;background:#F1F5F9;color:#64748B;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🌍 International</button>
+</div>
+<div id="current-affairs-list"></div>
+</div>
+</div>
+
+<!-- ═══ SETTINGS (NEW) ═══ -->
+<div class="page" id="page-settings">
+<div style="max-width:500px;margin:0 auto">
+<div class="card" style="margin-bottom:16px">
+<div class="sec-hd"><div class="sec-title">⚙️ App Settings</div></div>
+
+<div class="setting-row">
+<div>
+<div class="setting-label">🌐 UI Language / भाषा</div>
+<div class="setting-desc">Switch app interface between English and Hindi</div>
+</div>
+<button onclick="i18n.toggle()" style="padding:8px 16px;background:#1A237E;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" id="lang-toggle-btn">EN / हिं</button>
+</div>
+
+<div class="setting-row">
+<div>
+<div class="setting-label">🇮🇳 Question Language</div>
+<div class="setting-desc">Show MCQs in Hindi (requires Hindi question files)</div>
+</div>
+<div style="display:flex;gap:6px">
+<button onclick="setQLang('en')" id="set-qlang-en" style="padding:7px 12px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">EN</button>
+<button onclick="setQLang('hi')" id="set-qlang-hi" style="padding:7px 12px;background:#F1F5F9;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">हिं</button>
+</div>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🔔 Daily Reminders</div><div class="setting-desc">Get notification to study daily</div></div>
+<label class="switch"><input type="checkbox" id="setting-notifications" onchange="toggleNotifications(this.checked)"><span class="slider"></span></label>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🌙 Dark Mode</div><div class="setting-desc">Coming soon in v2.1</div></div>
+<label class="switch"><input type="checkbox" disabled><span class="slider" style="opacity:.4"></span></label>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🎟 Redeem Coupon</div><div class="setting-desc">Have a coupon code? Apply it here</div></div>
+<button onclick="redeemCoupon()" style="padding:8px 14px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Apply</button>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">📱 App Version</div><div class="setting-desc" id="setting-version-text">v1.0.2 — MPPSC 2026 Edition</div></div>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🗑️ Reset All Progress</div><div class="setting-desc">Clear all data — cannot be undone</div></div>
+<button onclick="if(confirm('Reset ALL progress? This cannot be undone!')){localStorage.clear();location.reload();}" style="padding:8px 14px;background:#DC2626;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Reset</button>
+</div>
+</div>
+
+<div class="card">
+<div class="sec-hd"><div class="sec-title">📖 How to Add Hindi Questions</div></div>
+<div style="font-size:13px;color:var(--muted);line-height:1.9">
+1. Translate a PYQ file (e.g. pyq_2021_paper1.js) to Hindi<br>
+2. Save as <code style="background:#F1F5F9;padding:1px 5px;border-radius:4px">pyq_2021_paper1_hi.js</code><br>
+3. Add <code style="background:#F1F5F9;padding:1px 5px;border-radius:4px">&lt;script src="pyq_2021_paper1_hi.js"&gt;</code> to index.html<br>
+4. Switch Question Language to हिं above<br><br>
+<span style="color:#7C3AED;font-weight:600">Tip:</span> Use Claude to translate one file per session — upload the .js file and ask for Hindi translation in same format.
+</div>
+</div>
+</div>
+</div>
+
 </main>
 
+<!-- ═══ DATA + SCRIPTS ═══ -->
 <script src="data_q.js"></script>
+<!-- Hindi PYQ files — uncomment each as you add them -->
+<!-- <script src="pyq_2021_paper1_hi.js"></script> -->
+<!-- <script src="pyq_2021_paper2_hi.js"></script> -->
+<!-- <script src="pyq_2022_paper1_hi.js"></script> -->
+<!-- <script src="pyq_2022_paper2_hi.js"></script> -->
+<!-- <script src="pyq_2023_paper1_hi.js"></script> -->
+<!-- <script src="pyq_2023_paper2_hi.js"></script> -->
+<!-- <script src="pyq_2024_paper1_hi.js"></script> -->
+<!-- <script src="pyq_2024_paper2_hi.js"></script> -->
 <script src="pyq_2024_paper1.js"></script>
 <script src="pyq_2024_paper2.js"></script>
 <script src="pyq_2023_paper1.js"></script>
@@ -444,8 +620,20 @@
 <script src="pyq_2021_paper2.js"></script>
 <script src="data_pyq.js"></script>
 <script src="data_notes.js"></script>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
+<script src="app_v2_additions.js"></script>
 <script src="auth.js"></script>
 <script src="updater.js"></script>
+<script>
+(function(){
+  var UPI='padhleyrr@upi';
+  window.dnCopyUPI=function(){
+    var el=document.getElementById('dn-upi-txt'), orig=el.textContent;
+    if(navigator.clipboard){navigator.clipboard.writeText(UPI).then(function(){el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);});}
+    else{var t=document.createElement('textarea');t.value=UPI;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();el.textContent='✅ Copied!';setTimeout(function(){el.textContent=orig;},2000);}
+  };
+})();
+</script>
 </body>
 </html>
