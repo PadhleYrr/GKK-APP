@@ -142,31 +142,40 @@ input:checked + .slider:before{transform:translateX(22px)}
 .info-card b{font-weight:700}
 
 /* ── NOTIFICATIONS ── */
-.notif-info-row{display:flex;align-items:center;justify-content:space-between;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:10px 14px}
+.notif-info-row{display:flex;align-items:center;justify-content:space-between;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:10px 14px;margin-bottom:4px}
 .notif-badge{font-size:12px;font-weight:700;color:#6D28D9}
 .notif-refresh-btn{background:none;border:1px solid #C4B5FD;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:#7C3AED;cursor:pointer;font-family:'DM Sans',sans-serif}
-.notif-refresh-btn:hover{background:#EDE9FE}
-
 .notif-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
 .notif-type-card{border:2px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;background:var(--card)}
 .notif-type-card:hover{border-color:#A78BFA;background:#F5F3FF}
 .notif-type-card.sel{border-color:#7C3AED;background:#F5F3FF}
 .notif-type-icon{font-size:20px;margin-bottom:4px}
 .notif-type-name{font-size:10px;font-weight:700;color:var(--text)}
-
 .priority-btn{padding:8px 16px;border:2px solid var(--border);border-radius:8px;background:var(--card);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s}
-.priority-btn:hover{border-color:#A78BFA}
 .priority-btn.sel{border-color:#7C3AED;background:#F5F3FF;color:#6D28D9}
-
 .notif-preview-card{background:#1C1C1E;border-radius:14px;padding:14px 16px;margin-top:8px}
-.notif-preview-app{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600;letter-spacing:.3px}
+.notif-preview-app{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:600}
 .notif-preview-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;line-height:1.4}
 .notif-preview-body{font-size:12px;color:rgba(255,255,255,.7);line-height:1.5}
-
-.notif-history-item{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--border)}
+.notif-history-item{padding:10px 0;border-bottom:1px solid var(--border)}
 .notif-history-item:last-child{border-bottom:none}
 .notif-history-title{font-size:12px;font-weight:700;color:var(--text)}
 .notif-history-meta{font-size:11px;color:var(--muted)}
+
+/* ── APP SETTINGS / THEMES ── */
+.theme-admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.theme-admin-card{border:2.5px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;text-align:center;background:#fff;position:relative}
+.theme-admin-card:hover{border-color:#818CF8;transform:translateY(-2px)}
+.theme-admin-card.sel{border-color:var(--navy);box-shadow:0 0 0 3px #EEF2FF}
+.sel-check{position:absolute;top:6px;right:6px;background:var(--navy);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.theme-swatches{display:flex;gap:3px;justify-content:center;margin-bottom:5px}
+.theme-swatch{width:16px;height:16px;border-radius:50%}
+.theme-admin-emoji{font-size:20px;margin-bottom:4px}
+.theme-admin-name{font-size:10px;font-weight:700;color:var(--text)}
+.app-setting-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #F1F5F9}
+.app-setting-row:last-child{border-bottom:none}
+.app-setting-label{font-size:14px;font-weight:600;color:var(--text)}
+.app-setting-desc{font-size:11px;color:var(--muted);margin-top:2px}
 </style>
 </head>
 <body>
@@ -201,6 +210,167 @@ input:checked + .slider:before{transform:translateX(22px)}
 
     <div class="info-card">
       <b>ℹ️ How this works:</b> Changes saved here are written to Firebase Firestore. The donate page reads these values in real-time — every user sees updates instantly without needing an app update.
+    </div>
+
+
+    <!-- ══ APP SETTINGS ══ -->
+    <div>
+      <div class="section-header">🎨 App Settings</div>
+
+      <!-- Universal Theme -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">🌐 Universal Theme <span style="font-size:11px;font-weight:400;color:var(--muted)">(overrides every user)</span></div>
+        <div class="info-card" style="margin-bottom:14px">
+          <b>ℹ️ How it works:</b> Selecting a theme here forces it on <b>all users</b> — their personal choice is locked with 🔒. Choose <b>"User Choice"</b> to let everyone pick their own.
+        </div>
+        <div class="theme-admin-grid" id="admin-theme-grid">Loading...</div>
+        <div id="theme-admin-status" class="status-bar" style="margin-top:10px"></div>
+        <button class="save-btn" id="save-theme-btn" onclick="saveUniversalTheme()" style="margin-top:12px;background:linear-gradient(135deg,#1A237E,#3949AB)">
+          <span>🎨</span> Apply Theme to All Users
+        </button>
+      </div>
+
+      <!-- Feature Toggles -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">🔧 Feature Toggles</div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">📅 Daily 10 Challenge</div><div class="app-setting-desc">Enable/disable daily 10 questions</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-daily" checked><span class="slider"></span></label>
+        </div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">🗺️ Map Quiz</div><div class="app-setting-desc">Show/hide the map quiz section</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-maps" checked><span class="slider"></span></label>
+        </div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">📰 Current Affairs</div><div class="app-setting-desc">Show/hide current affairs section</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-ca" checked><span class="slider"></span></label>
+        </div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">⏱️ Timed Mock Test</div><div class="app-setting-desc">Enable/disable timed mock mode</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-timed" checked><span class="slider"></span></label>
+        </div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">🔖 Bookmarks</div><div class="app-setting-desc">Let users save questions</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-bookmarks" checked><span class="slider"></span></label>
+        </div>
+        <div class="app-setting-row">
+          <div><div class="app-setting-label">🎟 Promo / Coupons</div><div class="app-setting-desc">Enable coupon redemption</div></div>
+          <label class="toggle"><input type="checkbox" id="feat-coupons" checked><span class="slider"></span></label>
+        </div>
+        <div id="feat-status" class="status-bar" style="margin-top:10px"></div>
+        <button class="save-btn" id="save-feat-btn" onclick="saveFeatureToggles()" style="margin-top:14px">
+          <span>💾</span> Save Feature Settings
+        </button>
+      </div>
+
+      <!-- Announcement Banner -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">📢 Dashboard Announcement Banner</div>
+        <div class="field-group">
+          <div class="field">
+            <label>Banner Message</label>
+            <input type="text" id="banner-text" placeholder="🎉 New PYQ 2025 papers added! Check PYQ section →" maxlength="120">
+            <span class="field-hint">Shown at top of dashboard for all users. Leave empty to hide.</span>
+          </div>
+          <div class="field">
+            <label>Banner Style</label>
+            <select id="banner-color">
+              <option value="navy">🔵 Navy Blue (default)</option>
+              <option value="success">🟢 Green (good news)</option>
+              <option value="warning">🟡 Amber (alert)</option>
+              <option value="danger">🔴 Red (urgent)</option>
+              <option value="purple">💜 Purple</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Click navigates to page <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+            <input type="text" id="banner-action" placeholder="e.g.  pyq  or  test  or  currentaffairs">
+          </div>
+        </div>
+        <div id="banner-status" class="status-bar" style="margin-top:10px"></div>
+        <button class="save-btn" onclick="saveBanner()" style="margin-top:12px;background:linear-gradient(135deg,#B45309,#D97706)">
+          <span>📢</span> Publish Banner
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ PUSH NOTIFICATIONS ══ -->
+    <div>
+      <div class="section-header">🔔 Push Notifications</div>
+      <div class="card">
+        <div class="card-title">📣 Send Notification to All Users</div>
+        <div class="notif-info-row">
+          <div class="notif-badge" id="notif-sub-count">⏳ Loading subscribers...</div>
+          <button class="notif-refresh-btn" onclick="refreshSubCount()">🔄 Refresh</button>
+        </div>
+        <div class="field-group" style="margin-top:14px">
+          <div class="field">
+            <label>Notification Type</label>
+            <div class="notif-type-grid" id="notif-type-grid">
+              <div class="notif-type-card sel" onclick="selNotifType(this,'general')"><div class="notif-type-icon">📢</div><div class="notif-type-name">General</div></div>
+              <div class="notif-type-card" onclick="selNotifType(this,'announcement')"><div class="notif-type-icon">🎉</div><div class="notif-type-name">Announce</div></div>
+              <div class="notif-type-card" onclick="selNotifType(this,'exam_alert')"><div class="notif-type-icon">⚠️</div><div class="notif-type-name">Exam Alert</div></div>
+              <div class="notif-type-card" onclick="selNotifType(this,'new_content')"><div class="notif-type-icon">✨</div><div class="notif-type-name">New Content</div></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Title <span style="color:var(--red)">*</span></label>
+            <input type="text" id="notif-title" placeholder="e.g. New Questions Added! 🎯" maxlength="65" oninput="updateNotifPreview()">
+            <span class="field-hint"><span id="notif-title-count">0</span>/65 characters</span>
+          </div>
+          <div class="field">
+            <label>Message Body <span style="color:var(--red)">*</span></label>
+            <textarea id="notif-body" placeholder="e.g. 50 new History questions just dropped — go test yourself now! 💪" maxlength="200" rows="3" oninput="updateNotifPreview()"></textarea>
+            <span class="field-hint"><span id="notif-body-count">0</span>/200 characters</span>
+          </div>
+          <div class="field">
+            <label>Image URL <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+            <input type="url" id="notif-image" placeholder="https://example.com/banner.jpg" oninput="updateNotifPreview()">
+            <span class="field-hint">Recommended 1200×628px — shown as large banner in notification</span>
+          </div>
+          <div class="field">
+            <label>Click Action</label>
+            <select id="notif-action" onchange="updateNotifPreview()">
+              <option value="dashboard">🏠 Dashboard</option>
+              <option value="test">✏️ MCQ Test</option>
+              <option value="syllabus">📋 Full Syllabus</option>
+              <option value="pyq">📄 PYQ Papers</option>
+              <option value="currentaffairs">📰 Current Affairs</option>
+              <option value="notes">📖 Notes</option>
+              <option value="donate">❤️ Support Us</option>
+              <option value="custom_url">🔗 Custom URL</option>
+            </select>
+          </div>
+          <div class="field" id="notif-custom-url-field" style="display:none">
+            <label>Custom URL</label>
+            <input type="url" id="notif-custom-url" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label>Priority</label>
+            <div style="display:flex;gap:8px">
+              <button class="priority-btn sel" id="prio-normal" onclick="selPriority('normal')">Normal</button>
+              <button class="priority-btn" id="prio-high" onclick="selPriority('high')">🔴 High</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:18px">
+          <div class="preview-label">📱 Live Preview</div>
+          <div class="notif-preview-card">
+            <div class="notif-preview-app">MP GK Portal · now</div>
+            <div class="notif-preview-title" id="prev-title">Your title appears here</div>
+            <div class="notif-preview-body" id="prev-body">Your message appears here...</div>
+            <div id="prev-img-wrap" style="display:none"><img id="prev-img" src="" alt="" style="width:100%;border-radius:8px;margin-top:8px;max-height:130px;object-fit:cover"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px">
+          <div class="preview-label">📋 Recent Notifications</div>
+          <div id="notif-history-list" style="font-size:12px;color:var(--muted)">Loading...</div>
+        </div>
+        <div id="notif-status-bar" class="status-bar" style="margin-top:14px"></div>
+        <button class="save-btn" id="send-notif-btn" onclick="sendNotification()" style="margin-top:14px;background:linear-gradient(135deg,#6D28D9,#7C3AED)">
+          <span>🚀</span> Send Notification
+        </button>
+      </div>
     </div>
 
     <!-- UPI Settings -->
@@ -299,141 +469,6 @@ input:checked + .slider:before{transform:translateX(22px)}
       </div>
     </div>
 
-    <!-- ── PUSH NOTIFICATIONS ── -->
-    <div>
-      <div class="section-header">🔔 Push Notifications</div>
-      <div class="card">
-        <div class="card-title">📣 Send Notification to All Users</div>
-
-        <div class="notif-info-row">
-          <div class="notif-badge" id="notif-sub-count">⏳ Loading subscribers...</div>
-          <button class="notif-refresh-btn" onclick="refreshSubCount()">🔄 Refresh</button>
-        </div>
-
-        <div class="field-group" style="margin-top:14px">
-
-          <!-- Notification Type -->
-          <div class="field">
-            <label>Notification Type</label>
-            <div class="notif-type-grid" id="notif-type-grid">
-              <div class="notif-type-card sel" onclick="selNotifType(this,'general')">
-                <div class="notif-type-icon">📢</div>
-                <div class="notif-type-name">General</div>
-              </div>
-              <div class="notif-type-card" onclick="selNotifType(this,'announcement')">
-                <div class="notif-type-icon">🎉</div>
-                <div class="notif-type-name">Announcement</div>
-              </div>
-              <div class="notif-type-card" onclick="selNotifType(this,'exam_alert')">
-                <div class="notif-type-icon">⚠️</div>
-                <div class="notif-type-name">Exam Alert</div>
-              </div>
-              <div class="notif-type-card" onclick="selNotifType(this,'new_content')">
-                <div class="notif-type-icon">✨</div>
-                <div class="notif-type-name">New Content</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Title -->
-          <div class="field">
-            <label>Notification Title <span style="color:var(--red)">*</span></label>
-            <input type="text" id="notif-title" placeholder="e.g. New Questions Added! 🎯" maxlength="65" oninput="updateNotifPreview()">
-            <span class="field-hint"><span id="notif-title-count">0</span>/65 characters</span>
-          </div>
-
-          <!-- Body -->
-          <div class="field">
-            <label>Message Body <span style="color:var(--red)">*</span></label>
-            <textarea id="notif-body" placeholder="e.g. 50 new History questions just dropped — go test yourself now! 💪" maxlength="200" rows="3" oninput="updateNotifPreview()"></textarea>
-            <span class="field-hint"><span id="notif-body-count">0</span>/200 characters</span>
-          </div>
-
-          <!-- Image URL -->
-          <div class="field">
-            <label>Image URL <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-            <input type="url" id="notif-image" placeholder="https://example.com/image.jpg" oninput="updateNotifPreview()">
-            <span class="field-hint">Recommended: 1200×628px. Shown as a large banner in the notification</span>
-          </div>
-
-          <!-- Click Action -->
-          <div class="field">
-            <label>Click Action <span style="color:var(--muted);font-weight:400">(where user lands)</span></label>
-            <select id="notif-action" onchange="updateNotifPreview()">
-              <option value="dashboard">🏠 Dashboard</option>
-              <option value="test">✏️ MCQ Test</option>
-              <option value="srsreview">🧠 Smart Review</option>
-              <option value="syllabus">📋 Full Syllabus</option>
-              <option value="pyq">📄 PYQ Papers</option>
-              <option value="currentaffairs">📰 Current Affairs</option>
-              <option value="notes">📖 Notes</option>
-              <option value="donate">❤️ Support Us</option>
-              <option value="custom_url">🔗 Custom URL</option>
-            </select>
-          </div>
-
-          <!-- Custom URL (shown only when custom_url selected) -->
-          <div class="field" id="notif-custom-url-field" style="display:none">
-            <label>Custom URL</label>
-            <input type="url" id="notif-custom-url" placeholder="https://...">
-          </div>
-
-          <!-- Schedule -->
-          <div class="field">
-            <label>Schedule</label>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer">
-                <input type="radio" name="notif-schedule" value="now" checked onchange="toggleSchedule()"> Send Now
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer">
-                <input type="radio" name="notif-schedule" value="scheduled" onchange="toggleSchedule()"> Schedule for Later
-              </label>
-            </div>
-          </div>
-
-          <div class="field" id="notif-schedule-field" style="display:none">
-            <label>Date & Time</label>
-            <input type="datetime-local" id="notif-schedule-time">
-            <span class="field-hint">Notification will be queued in Firestore and sent at this time</span>
-          </div>
-
-          <!-- Priority -->
-          <div class="field">
-            <label>Priority</label>
-            <div style="display:flex;gap:8px">
-              <button class="priority-btn sel" id="prio-normal" onclick="selPriority('normal')">Normal</button>
-              <button class="priority-btn" id="prio-high" onclick="selPriority('high')">🔴 High</button>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Live Preview -->
-        <div style="margin-top:20px">
-          <div class="preview-label">📱 Notification Preview</div>
-          <div class="notif-preview-card" id="notif-preview">
-            <div class="notif-preview-app">MP GK Portal · now</div>
-            <div class="notif-preview-title" id="prev-title">Your title appears here</div>
-            <div class="notif-preview-body" id="prev-body">Your message appears here...</div>
-            <div class="notif-preview-img-wrap" id="prev-img-wrap" style="display:none">
-              <img id="prev-img" src="" alt="Notification image" style="width:100%;border-radius:8px;margin-top:8px;max-height:140px;object-fit:cover">
-            </div>
-          </div>
-        </div>
-
-        <!-- History -->
-        <div style="margin-top:20px">
-          <div class="preview-label">📋 Recent Notifications (last 5)</div>
-          <div id="notif-history-list" style="font-size:12px;color:var(--muted)">Loading...</div>
-        </div>
-
-        <div id="notif-status-bar" class="status-bar" style="margin-top:14px"></div>
-        <button class="save-btn" id="send-notif-btn" onclick="sendNotification()" style="margin-top:14px;background:linear-gradient(135deg,#6D28D9,#7C3AED)">
-          <span>🚀</span> Send Notification
-        </button>
-      </div>
-    </div>
-
     <!-- Save Button -->
     <div id="status-bar" class="status-bar"></div>
     <button class="save-btn" id="save-btn" onclick="saveConfig()">
@@ -458,7 +493,7 @@ input:checked + .slider:before{transform:translateX(22px)}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc }
+import { getFirestore, doc, setDoc, getDoc, addDoc, getDocs, collection, query, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FIREBASE_CONFIG = {
@@ -486,6 +521,253 @@ function showStatus(msg, type) {
   bar.className = 'status-bar ' + type;
   setTimeout(() => bar.style.display = 'none', 4000);
 }
+
+// ══════════════════════════════════════════════
+//  ADMIN THEME SYSTEM
+// ══════════════════════════════════════════════
+
+const ADMIN_THEMES = [
+  { id:'user_choice', name:'User Choice',    emoji:'🎭', p:['#64748B','#94A3B8','#F1F5F9'] },
+  { id:'default',     name:'Classic Blue',   emoji:'🔵', p:['#1A237E','#FF6B00','#F4F6FB'] },
+  { id:'dark',        name:'Dark Night',     emoji:'🌙', p:['#818CF8','#FB923C','#0F172A'] },
+  { id:'amoled',      name:'AMOLED Black',   emoji:'⚫', p:['#60A5FA','#F472B6','#000000'] },
+  { id:'emerald',     name:'Emerald Forest', emoji:'🌿', p:['#065F46','#F59E0B','#ECFDF5'] },
+  { id:'ocean',       name:'Ocean Breeze',   emoji:'🌊', p:['#0C4A6E','#0EA5E9','#F0F9FF'] },
+  { id:'purple',      name:'Royal Purple',   emoji:'💜', p:['#5B21B6','#A855F7','#FAF5FF'] },
+  { id:'rose',        name:'Rose Petal',     emoji:'🌸', p:['#9F1239','#F97316','#FFF1F2'] },
+  { id:'sunset',      name:'Sunset Warm',    emoji:'🌅', p:['#B45309','#EF4444','#FFFBEB'] },
+  { id:'mint',        name:'Mint Fresh',     emoji:'🍃', p:['#134E4A','#10B981','#F0FDFA'] },
+  { id:'saffron',     name:'Saffron India',  emoji:'🇮🇳', p:['#9A3412','#F97316','#FFF7ED'] },
+];
+
+let _selAdminTheme = 'user_choice';
+
+function renderAdminThemeGrid(current) {
+  _selAdminTheme = current || 'user_choice';
+  const grid = $('admin-theme-grid');
+  if (!grid) return;
+  grid.innerHTML = ADMIN_THEMES.map(t => {
+    const on = t.id === _selAdminTheme;
+    return `<div class="theme-admin-card ${on ? 'sel' : ''}" onclick="selectAdminTheme('${t.id}')">
+      ${on ? '<div class="sel-check">✓</div>' : ''}
+      <div class="theme-admin-emoji">${t.emoji}</div>
+      <div class="theme-swatches">
+        <div class="theme-swatch" style="background:${t.p[0]}"></div>
+        <div class="theme-swatch" style="background:${t.p[1]}"></div>
+        <div class="theme-swatch" style="background:${t.p[2]};border:1px solid #E2E8F0"></div>
+      </div>
+      <div class="theme-admin-name">${t.name}</div>
+    </div>`;
+  }).join('');
+}
+
+window.selectAdminTheme = function(id) {
+  _selAdminTheme = id;
+  renderAdminThemeGrid(id);
+};
+
+window.saveUniversalTheme = async function() {
+  const btn = $('save-theme-btn');
+  btn.disabled = true; btn.innerHTML = '<span>⏳</span> Saving...';
+  try {
+    await setDoc(doc(db, 'config', 'app_settings'), {
+      universalTheme: _selAdminTheme === 'user_choice' ? null : _selAdminTheme,
+      themeUpdatedAt: new Date().toISOString()
+    }, { merge: true });
+    const s = $('theme-admin-status');
+    s.textContent = _selAdminTheme === 'user_choice'
+      ? '✅ Unlocked — users can now choose their own theme.'
+      : `✅ "${_selAdminTheme}" theme applied to all users!`;
+    s.className = 'status-bar success';
+    setTimeout(() => s.style.display='none', 4000);
+  } catch(e) {
+    const s = $('theme-admin-status');
+    s.textContent = '❌ ' + e.message; s.className = 'status-bar error';
+  }
+  btn.disabled = false; btn.innerHTML = '<span>🎨</span> Apply Theme to All Users';
+};
+
+// ══════════════════════════════════════════════
+//  FEATURE TOGGLES
+// ══════════════════════════════════════════════
+
+window.saveFeatureToggles = async function() {
+  const btn = $('save-feat-btn');
+  btn.disabled = true; btn.innerHTML = '<span>⏳</span> Saving...';
+  try {
+    await setDoc(doc(db, 'config', 'app_settings'), {
+      features: {
+        daily:     $('feat-daily').checked,
+        maps:      $('feat-maps').checked,
+        currentAffairs: $('feat-ca').checked,
+        timed:     $('feat-timed').checked,
+        bookmarks: $('feat-bookmarks').checked,
+        coupons:   $('feat-coupons').checked,
+      },
+      featUpdatedAt: new Date().toISOString()
+    }, { merge: true });
+    const s = $('feat-status');
+    s.textContent = '✅ Feature settings saved! Reflects on next app load.';
+    s.className = 'status-bar success';
+    setTimeout(() => s.style.display='none', 4000);
+  } catch(e) {
+    const s = $('feat-status');
+    s.textContent = '❌ ' + e.message; s.className = 'status-bar error';
+  }
+  btn.disabled = false; btn.innerHTML = '<span>💾</span> Save Feature Settings';
+};
+
+// ══════════════════════════════════════════════
+//  ANNOUNCEMENT BANNER
+// ══════════════════════════════════════════════
+
+window.saveBanner = async function() {
+  const s = $('banner-status');
+  try {
+    await setDoc(doc(db, 'config', 'app_settings'), {
+      banner: {
+        text:   $('banner-text').value.trim(),
+        color:  $('banner-color').value,
+        action: $('banner-action').value.trim(),
+        ts:     new Date().toISOString()
+      }
+    }, { merge: true });
+    s.textContent = $('banner-text').value.trim()
+      ? '✅ Banner published to all users dashboard!'
+      : '✅ Banner cleared.';
+    s.className = 'status-bar success';
+    setTimeout(() => s.style.display='none', 4000);
+  } catch(e) {
+    s.textContent = '❌ ' + e.message; s.className = 'status-bar error';
+  }
+};
+
+// ══════════════════════════════════════════════
+//  PUSH NOTIFICATIONS
+// ══════════════════════════════════════════════
+
+let _notifType = 'general';
+let _notifPriority = 'normal';
+
+window.selNotifType = function(el, t) {
+  _notifType = t;
+  document.querySelectorAll('.notif-type-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+};
+
+window.selPriority = function(p) {
+  _notifPriority = p;
+  $('prio-normal').classList.toggle('sel', p === 'normal');
+  $('prio-high').classList.toggle('sel', p === 'high');
+};
+
+window.updateNotifPreview = function() {
+  $('prev-title').textContent = $('notif-title').value || 'Your title appears here';
+  $('prev-body').textContent  = $('notif-body').value  || 'Your message appears here...';
+  $('notif-title-count').textContent = $('notif-title').value.length;
+  $('notif-body-count').textContent  = $('notif-body').value.length;
+  const img = $('notif-image').value.trim();
+  $('prev-img-wrap').style.display = img ? 'block' : 'none';
+  if (img) $('prev-img').src = img;
+  $('notif-custom-url-field').style.display = $('notif-action').value === 'custom_url' ? 'block' : 'none';
+};
+
+window.refreshSubCount = async function() {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    let n = 0; snap.forEach(d => { if(d.data().fcmToken) n++; });
+    $('notif-sub-count').textContent = `📱 ${n} device${n!==1?'s':''} subscribed`;
+  } catch(e) { $('notif-sub-count').textContent = '📱 Count unavailable'; }
+};
+
+async function loadNotifHistory() {
+  try {
+    const q = query(collection(db, 'notifications'), orderBy('sentAt','desc'), limit(5));
+    const snap = await getDocs(q);
+    const el = $('notif-history-list');
+    if (snap.empty) { el.innerHTML = '<div style="padding:8px 0">No notifications sent yet.</div>'; return; }
+    const tc = {general:'#6D28D9',announcement:'#D97706',exam_alert:'#DC2626',new_content:'#059669'};
+    el.innerHTML = snap.docs.map(d => {
+      const n = d.data();
+      const dt = n.sentAt ? new Date(n.sentAt).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      const col = tc[n.type]||'#6D28D9';
+      return `<div class="notif-history-item">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px">
+          <span style="background:${col}20;color:${col};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">${(n.type||'general').replace('_',' ').toUpperCase()}</span>
+          ${n.priority==='high'?'<span style="font-size:10px;color:#DC2626;font-weight:700">🔴 HIGH</span>':''}
+        </div>
+        <div class="notif-history-title">${n.title||'—'}</div>
+        <div class="notif-history-meta">${n.body||''}</div>
+        <div class="notif-history-meta" style="margin-top:2px">📅 ${dt} · 📱 ${n.recipientCount||'—'} devices</div>
+      </div>`;
+    }).join('');
+  } catch(e) { $('notif-history-list').innerHTML = 'Could not load history.'; }
+}
+
+window.sendNotification = async function() {
+  const title  = $('notif-title').value.trim();
+  const body   = $('notif-body').value.trim();
+  const image  = $('notif-image').value.trim();
+  const action = $('notif-action').value;
+  const url    = $('notif-custom-url').value.trim();
+  if (!title) { showStatus('Title is required.','error'); return; }
+  if (!body)  { showStatus('Message body is required.','error'); return; }
+  const btn = $('send-notif-btn');
+  btn.disabled = true; btn.innerHTML = '<span>⏳</span> Sending...';
+  try {
+    let rc = 0;
+    try { const s = await getDocs(collection(db,'users')); s.forEach(d=>{if(d.data().fcmToken)rc++;}); } catch(e){}
+    await addDoc(collection(db,'notifications'), {
+      title, body, type:_notifType, priority:_notifPriority,
+      action: action==='custom_url' ? url : action,
+      imageUrl: image||null,
+      status:'pending',
+      sentAt: new Date().toISOString(),
+      recipientCount: rc,
+      createdBy: auth.currentUser?.email||'admin'
+    });
+    const ns = $('notif-status-bar');
+    ns.textContent = `✅ Notification queued for ${rc} device(s)! Firebase Cloud Messaging will deliver it.`;
+    ns.className = 'status-bar success'; ns.style.display='flex';
+    $('notif-title').value=''; $('notif-body').value=''; $('notif-image').value='';
+    $('notif-title-count').textContent='0'; $('notif-body-count').textContent='0';
+    $('prev-title').textContent='Your title appears here';
+    $('prev-body').textContent='Your message appears here...';
+    $('prev-img-wrap').style.display='none';
+    await loadNotifHistory();
+    setTimeout(()=>ns.style.display='none',6000);
+  } catch(e) {
+    const ns=$('notif-status-bar');
+    ns.textContent='❌ '+e.message; ns.className='status-bar error'; ns.style.display='flex';
+  }
+  btn.disabled=false; btn.innerHTML='<span>🚀</span> Send Notification';
+};
+
+// ══════════════════════════════════════════════
+//  LOAD APP SETTINGS (themes + features + banner)
+// ══════════════════════════════════════════════
+
+async function loadAppSettings() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'app_settings'));
+    if (!snap.exists()) { renderAdminThemeGrid('user_choice'); return; }
+    const d = snap.data();
+    renderAdminThemeGrid(d.universalTheme || 'user_choice');
+    if (d.features) {
+      ['daily','maps','timed','bookmarks','coupons'].forEach(k => {
+        const el = $(k==='currentAffairs'?'feat-ca':`feat-${k}`);
+        if(el) el.checked = d.features[k] !== false;
+      });
+      if($('feat-ca')) $('feat-ca').checked = d.features.currentAffairs !== false;
+    }
+    if (d.banner) {
+      if($('banner-text'))   $('banner-text').value   = d.banner.text||'';
+      if($('banner-color'))  $('banner-color').value  = d.banner.color||'navy';
+      if($('banner-action')) $('banner-action').value = d.banner.action||'';
+    }
+  } catch(e) { renderAdminThemeGrid('user_choice'); }
+}
+
 
 async function loadConfig() {
   try {
@@ -594,6 +876,9 @@ onAuthStateChanged(auth, async (user) => {
     $('login-screen').style.display = 'none';
     $('admin-app').style.display = 'block';
     await loadConfig();
+    await loadAppSettings();
+    await loadNotifHistory();
+    refreshSubCount();
   } else {
     $('login-screen').style.display = 'flex';
     $('admin-app').style.display = 'none';
@@ -601,187 +886,6 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 window.loadConfig = loadConfig;
-
-// ── NOTIFICATIONS ─────────────────────────────
-
-let selectedNotifType = 'general';
-let selectedPriority = 'normal';
-
-const NOTIF_DOC_PATH = 'notifications';
-
-window.selNotifType = function(el, type) {
-  selectedNotifType = type;
-  document.querySelectorAll('.notif-type-card').forEach(c => c.classList.remove('sel'));
-  el.classList.add('sel');
-};
-
-window.selPriority = function(p) {
-  selectedPriority = p;
-  document.getElementById('prio-normal').classList.toggle('sel', p === 'normal');
-  document.getElementById('prio-high').classList.toggle('sel', p === 'high');
-};
-
-window.toggleSchedule = function() {
-  const isScheduled = document.querySelector('input[name="notif-schedule"]:checked').value === 'scheduled';
-  document.getElementById('notif-schedule-field').style.display = isScheduled ? 'block' : 'none';
-};
-
-// Update live preview as user types
-window.updateNotifPreview = function() {
-  const title = $('notif-title').value || 'Your title appears here';
-  const body = $('notif-body').value || 'Your message appears here...';
-  const img = $('notif-image').value.trim();
-  const action = $('notif-action').value;
-  $('prev-title').textContent = title;
-  $('prev-body').textContent = body;
-  $('notif-title-count').textContent = $('notif-title').value.length;
-  $('notif-body-count').textContent = $('notif-body').value.length;
-  const imgWrap = $('prev-img-wrap');
-  const imgEl = $('prev-img');
-  if (img) { imgEl.src = img; imgWrap.style.display = 'block'; }
-  else { imgWrap.style.display = 'none'; }
-  $('notif-custom-url-field').style.display = action === 'custom_url' ? 'block' : 'none';
-};
-
-// Count FCM tokens stored in Firestore users collection
-window.refreshSubCount = async function() {
-  try {
-    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const usersRef = collection(db, 'users');
-    const snap = await getDocs(usersRef);
-    let withToken = 0;
-    snap.forEach(doc => { if (doc.data().fcmToken) withToken++; });
-    $('notif-sub-count').textContent = `📱 ${withToken} device${withToken !== 1 ? 's' : ''} subscribed`;
-  } catch(e) {
-    $('notif-sub-count').textContent = '📱 Subscriber count unavailable';
-  }
-};
-
-// Load notification history
-async function loadNotifHistory() {
-  try {
-    const { collection, getDocs, query, orderBy, limit } =
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const ref = collection(db, 'notifications');
-    const q = query(ref, orderBy('sentAt', 'desc'), limit(5));
-    const snap = await getDocs(q);
-    const listEl = $('notif-history-list');
-    if (snap.empty) { listEl.innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">No notifications sent yet.</div>'; return; }
-    listEl.innerHTML = snap.docs.map(d => {
-      const n = d.data();
-      const date = n.sentAt ? new Date(n.sentAt).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Scheduled';
-      const typeColors = { general:'#6D28D9', announcement:'#D97706', exam_alert:'#DC2626', new_content:'#059669' };
-      const c = typeColors[n.type] || '#6D28D9';
-      return `<div class="notif-history-item">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-          <span style="display:inline-block;background:${c}20;color:${c};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">${(n.type || 'general').replace('_',' ').toUpperCase()}</span>
-          ${n.priority === 'high' ? '<span style="font-size:10px;color:#DC2626;font-weight:700">🔴 HIGH</span>' : ''}
-        </div>
-        <div class="notif-history-title">${n.title || '—'}</div>
-        <div class="notif-history-meta">${n.body || ''}</div>
-        <div class="notif-history-meta" style="margin-top:3px">📅 ${date} · 📱 ${n.recipientCount || '—'} devices · 🎯 ${n.action || 'dashboard'}</div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    $('notif-history-list').innerHTML = '<div style="color:var(--muted);font-size:12px">Could not load history.</div>';
-  }
-}
-
-function showNotifStatus(msg, type) {
-  const bar = $('notif-status-bar');
-  bar.textContent = (type === 'success' ? '✅ ' : type === 'info' ? 'ℹ️ ' : '❌ ') + msg;
-  bar.className = 'status-bar ' + (type === 'info' ? 'success' : type);
-  bar.style.display = 'flex';
-  if (type !== 'info') setTimeout(() => { bar.style.display = 'none'; }, 5000);
-}
-
-window.sendNotification = async function() {
-  const title = $('notif-title').value.trim();
-  const body = $('notif-body').value.trim();
-  const imageUrl = $('notif-image').value.trim();
-  const action = $('notif-action').value;
-  const customUrl = $('notif-custom-url').value.trim();
-  const scheduleMode = document.querySelector('input[name="notif-schedule"]:checked').value;
-  const scheduleTime = $('notif-schedule-time').value;
-
-  if (!title) { showNotifStatus('Notification title is required.', 'error'); return; }
-  if (!body) { showNotifStatus('Message body is required.', 'error'); return; }
-  if (scheduleMode === 'scheduled' && !scheduleTime) { showNotifStatus('Please set a schedule date & time.', 'error'); return; }
-
-  const btn = $('send-notif-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span> Sending...';
-
-  try {
-    const { collection, addDoc, getDocs } =
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-
-    // Count devices with FCM tokens
-    let recipientCount = 0;
-    try {
-      const usersSnap = await getDocs(collection(db, 'users'));
-      usersSnap.forEach(d => { if (d.data().fcmToken) recipientCount++; });
-    } catch(e) {}
-
-    const notifData = {
-      title,
-      body,
-      type: selectedNotifType,
-      priority: selectedPriority,
-      action: action === 'custom_url' ? customUrl : action,
-      imageUrl: imageUrl || null,
-      status: scheduleMode === 'now' ? 'pending' : 'scheduled',
-      sentAt: scheduleMode === 'now' ? new Date().toISOString() : null,
-      scheduledFor: scheduleMode === 'scheduled' ? new Date(scheduleTime).toISOString() : null,
-      recipientCount,
-      createdAt: new Date().toISOString(),
-      createdBy: auth.currentUser?.email || 'admin'
-    };
-
-    await addDoc(collection(db, 'notifications'), notifData);
-
-    if (scheduleMode === 'now') {
-      showNotifStatus(`Notification queued for ${recipientCount} device(s)! Firebase Cloud Messaging will deliver it shortly.`, 'success');
-    } else {
-      const schedDate = new Date(scheduleTime).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      showNotifStatus(`Notification scheduled for ${schedDate}. Set up a Cloud Function to process the queue.`, 'info');
-    }
-
-    // Clear form
-    $('notif-title').value = '';
-    $('notif-body').value = '';
-    $('notif-image').value = '';
-    $('notif-title-count').textContent = '0';
-    $('notif-body-count').textContent = '0';
-    $('prev-title').textContent = 'Your title appears here';
-    $('prev-body').textContent = 'Your message appears here...';
-    $('prev-img-wrap').style.display = 'none';
-
-    // Reload history
-    await loadNotifHistory();
-
-  } catch(e) {
-    showNotifStatus('Failed to send: ' + e.message, 'error');
-  }
-
-  btn.disabled = false;
-  btn.innerHTML = '<span>🚀</span> Send Notification';
-};
-
-// Init notification section after auth
-const _origOnAuth = window._onAuthInit;
-setTimeout(() => {
-  refreshSubCount();
-  loadNotifHistory();
-  // Set min date for scheduler to now
-  const dtInput = $('notif-schedule-time');
-  if (dtInput) {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    dtInput.min = now.toISOString().slice(0, 16);
-  }
-}, 1500);
-
 </script>
 </body>
 </html>

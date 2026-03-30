@@ -68,7 +68,6 @@ input:checked+.slider:before{transform:translateX(20px)}
 <div class="nav-item" onclick="showPage('test')"><span class="ni">✏️</span>MCQ Test<span class="nav-badge">421</span></div>
 <div class="nav-item" onclick="showPage('daily')"><span class="ni">📅</span>Daily 10</div>
 <div class="nav-item" onclick="showPage('timed')"><span class="ni">⏱️</span>Timed Mock</div>
-<div class="nav-item" onclick="showPage('srsreview')"><span class="ni">🧠</span>Smart Review<span class="nav-badge srs-badge" id="srs-count-badge" style="background:#7C3AED;display:none">0</span></div>
 
 <div class="nav-section">Resources</div>
 <div class="nav-item" onclick="showPage('pyq')"><span class="ni">📄</span>PYQ Papers<span class="nav-badge">4yr</span></div>
@@ -462,7 +461,7 @@ input:checked+.slider:before{transform:translateX(20px)}
 <div style="font-size:32px">📋</div>
 <div>
 <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Complete MPPSC Syllabus</div>
-<div style="font-size:12px;opacity:.7;margin-top:2px">Paper 1 (GS) + Paper 2 (CSAT) + Paper 3 (MP GK) — Full Coverage</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Paper 1 (GS) + Paper 2 (CSAT) + Paper 3 (MP GK)</div>
 </div>
 </div>
 </div>
@@ -470,20 +469,17 @@ input:checked+.slider:before{transform:translateX(20px)}
 </div>
 </div>
 
-<!-- ═══ SMART REVIEW / SRS ═══ -->
-<div class="page" id="page-srsreview">
-<div style="max-width:700px;margin:0 auto">
-<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#4A148C,#7B1FA2);color:#fff;border:0">
-<div style="display:flex;align-items:center;gap:12px">
-<div style="font-size:32px">🧠</div>
-<div>
-<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Spaced Repetition Review</div>
-<div style="font-size:12px;opacity:.7;margin-top:2px">Questions you got wrong come back at optimal intervals (1→3→7→14→30 days)</div>
-</div>
-</div>
+
 </div>
 <div class="grid-4" id="srs-stats-grid" style="margin-bottom:16px"></div>
-<div id="srs-review-area"></div>
+<div id="srs-review-area">
+<div class="card" style="text-align:center;padding:32px">
+<div style="font-size:40px;margin-bottom:12px">🧠</div>
+<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">No reviews due today</div>
+<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Complete MCQ tests and get questions wrong — they'll appear here for spaced repetition review.</div>
+<button class="btn-primary" style="width:auto;padding:10px 24px" onclick="showPage('test')">Go Practice →</button>
+</div>
+</div>
 </div>
 </div>
 
@@ -529,9 +525,55 @@ No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
 
 <!-- ═══ SETTINGS (NEW) ═══ -->
 <div class="page" id="page-settings">
-<div style="max-width:500px;margin:0 auto">
+<div style="max-width:560px;margin:0 auto">
+
 <div class="card" style="margin-bottom:16px">
-<div class="sec-hd"><div class="sec-title">⚙️ App Settings</div></div>
+<div class="sec-hd">
+  <div class="sec-title">🎨 App Theme</div>
+  <div id="theme-active-label" style="font-size:11px;background:#EEF0FF;color:var(--navy);padding:3px 10px;border-radius:20px;font-weight:700">Classic Blue</div>
+</div>
+<div style="font-size:12px;color:var(--muted);margin-bottom:14px">Choose your look. Saved automatically.</div>
+<div id="theme-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+<div class="sec-hd"><div class="sec-title">⚙️ General</div></div>
+
+<div class="setting-row">
+<div><div class="setting-label">🌐 UI Language / भाषा</div><div class="setting-desc">Switch between English and Hindi</div></div>
+<button onclick="i18n.toggle()" style="padding:8px 16px;background:var(--navy);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" id="lang-toggle-btn">EN / हिं</button>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🇮🇳 Question Language</div><div class="setting-desc">Show MCQs in Hindi (requires Hindi question files)</div></div>
+<div style="display:flex;gap:6px">
+<button onclick="setQLang('en')" id="set-qlang-en" style="padding:7px 12px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">EN</button>
+<button onclick="setQLang('hi')" id="set-qlang-hi" style="padding:7px 12px;background:#F1F5F9;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">हिं</button>
+</div>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🔔 Daily Reminders</div><div class="setting-desc">Get notification to study daily</div></div>
+<label class="switch"><input type="checkbox" id="setting-notifications" onchange="toggleNotifications(this.checked)"><span class="slider"></span></label>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🎟 Redeem Coupon</div><div class="setting-desc">Have a coupon code? Apply it here</div></div>
+<button onclick="redeemCoupon()" style="padding:8px 14px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Apply</button>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">📱 App Version</div><div class="setting-desc" id="setting-version-text">v1.0.2 — MPPSC 2026 Edition</div></div>
+</div>
+
+<div class="setting-row">
+<div><div class="setting-label">🗑️ Reset All Progress</div><div class="setting-desc">Clear all data — cannot be undone</div></div>
+<button onclick="if(confirm('Reset ALL progress? This cannot be undone!\')){localStorage.clear();location.reload();}" style="padding:8px 14px;background:#DC2626;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Reset</button>
+</div>
+</div>
+
+</div>
+</div>
 
 <div class="setting-row">
 <div>
@@ -617,7 +659,6 @@ No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
 <script src="app.js"></script>
 <script src="app_v2_additions.js"></script>
 <script src="data_syllabus.js"></script>
-<script src="smart_study.js"></script>
 <script src="auth.js"></script>
 <script src="updater.js"></script>
 <script>

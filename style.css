@@ -253,3 +253,94 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .result-grid{grid-template-columns:repeat(2,1fr)}
   .rings-grid{grid-template-columns:repeat(4,1fr)}
 }
+
+
+/* ══════════════════════════════════════════════
+   THEME SYSTEM — 9 themes
+   Each overrides CSS variables + sidebar/banner bg
+   ══════════════════════════════════════════════ */
+
+/* Smooth transitions when switching themes */
+body,body *{transition:background-color .25s,color .15s,border-color .2s}
+
+/* ── Dark Night ── */
+body.theme-dark{--navy:#818CF8;--saff:#FB923C;--gold:#FBBF24;--bg:#0F172A;--card:#1E293B;--border:#334155;--text:#F1F5F9;--muted:#94A3B8;--success:#4ADE80;--danger:#F87171;--warn:#FCD34D;--shadow:0 2px 16px rgba(0,0,0,.45)}
+body.theme-dark .sidebar{background:#1E293B}
+body.theme-dark .daily-banner{background:#312E81}
+body.theme-dark .nsh{background:#312E81}
+body.theme-dark .nkv tr:nth-child(odd) td{background:#252F40!important}
+body.theme-dark .nkv td:first-child{background:#2D3A4E!important;color:#A5B4FC!important}
+body.theme-dark .opt:hover:not(:disabled){background:#252F40;border-color:#818CF8}
+body.theme-dark .mode-card.sel{background:#252F40}
+body.theme-dark .hm-0{background:#334155}
+
+/* ── AMOLED Black ── */
+body.theme-amoled{--navy:#60A5FA;--saff:#F472B6;--gold:#FACC15;--bg:#000000;--card:#0D0D0D;--border:#1F1F1F;--text:#F9FAFB;--muted:#9CA3AF;--success:#34D399;--danger:#F87171;--warn:#FBBF24;--shadow:0 2px 20px rgba(0,0,0,.7)}
+body.theme-amoled .sidebar{background:#0D0D0D;border-right:1px solid #1F1F1F}
+body.theme-amoled .daily-banner{background:#111827}
+body.theme-amoled .nsh{background:#111827}
+body.theme-amoled .nkv tr:nth-child(odd) td{background:#0D0D0D!important}
+body.theme-amoled .nkv td:first-child{background:#151515!important;color:#60A5FA!important}
+body.theme-amoled .hm-0{background:#1F1F1F}
+
+/* ── Emerald Forest ── */
+body.theme-emerald{--navy:#065F46;--saff:#F59E0B;--gold:#FCD34D;--bg:#ECFDF5;--card:#ffffff;--border:#A7F3D0;--text:#064E3B;--muted:#6B7280;--success:#059669;--shadow:0 2px 12px rgba(6,95,70,.1)}
+body.theme-emerald .sidebar{background:#064E3B}
+body.theme-emerald .daily-banner{background:#064E3B}
+body.theme-emerald .nsh{background:#064E3B}
+body.theme-emerald .nkv td:first-child{background:#D1FAE5!important;color:#064E3B!important}
+body.theme-emerald .mode-card.sel{background:#D1FAE5}
+body.theme-emerald .hm-4{background:#065F46}
+
+/* ── Ocean Breeze ── */
+body.theme-ocean{--navy:#0C4A6E;--saff:#0EA5E9;--gold:#38BDF8;--bg:#F0F9FF;--card:#ffffff;--border:#BAE6FD;--text:#082F49;--muted:#64748B;--success:#0891B2;--shadow:0 2px 12px rgba(12,74,110,.1)}
+body.theme-ocean .sidebar{background:#0C4A6E}
+body.theme-ocean .daily-banner{background:#0C4A6E}
+body.theme-ocean .nsh{background:#0C4A6E}
+body.theme-ocean .nkv td:first-child{background:#E0F2FE!important;color:#0C4A6E!important}
+body.theme-ocean .mode-card.sel{background:#E0F2FE}
+body.theme-ocean .hm-4{background:#0C4A6E}
+
+/* ── Royal Purple ── */
+body.theme-purple{--navy:#5B21B6;--saff:#A855F7;--gold:#E879F9;--bg:#FAF5FF;--card:#ffffff;--border:#DDD6FE;--text:#3B0764;--muted:#7C3AED;--success:#7C3AED;--shadow:0 2px 12px rgba(91,33,182,.1)}
+body.theme-purple .sidebar{background:#4C1D95}
+body.theme-purple .daily-banner{background:#4C1D95}
+body.theme-purple .nsh{background:#4C1D95}
+body.theme-purple .nkv td:first-child{background:#EDE9FE!important;color:#5B21B6!important}
+body.theme-purple .mode-card.sel{background:#EDE9FE}
+body.theme-purple .hm-4{background:#5B21B6}
+
+/* ── Rose Petal ── */
+body.theme-rose{--navy:#9F1239;--saff:#F97316;--gold:#FB923C;--bg:#FFF1F2;--card:#ffffff;--border:#FECDD3;--text:#881337;--muted:#BE123C;--success:#BE185D;--shadow:0 2px 12px rgba(159,18,57,.08)}
+body.theme-rose .sidebar{background:#9F1239}
+body.theme-rose .daily-banner{background:#9F1239}
+body.theme-rose .nsh{background:#9F1239}
+body.theme-rose .nkv td:first-child{background:#FFE4E6!important;color:#9F1239!important}
+body.theme-rose .mode-card.sel{background:#FFE4E6}
+body.theme-rose .hm-4{background:#9F1239}
+
+/* ── Sunset Warm ── */
+body.theme-sunset{--navy:#B45309;--saff:#EF4444;--gold:#FBBF24;--bg:#FFFBEB;--card:#ffffff;--border:#FDE68A;--text:#78350F;--muted:#92400E;--success:#65A30D;--shadow:0 2px 12px rgba(180,83,9,.1)}
+body.theme-sunset .sidebar{background:#92400E}
+body.theme-sunset .daily-banner{background:#92400E}
+body.theme-sunset .nsh{background:#92400E}
+body.theme-sunset .nkv td:first-child{background:#FEF3C7!important;color:#92400E!important}
+body.theme-sunset .mode-card.sel{background:#FEF3C7}
+body.theme-sunset .hm-4{background:#B45309}
+
+/* ── Mint Fresh ── */
+body.theme-mint{--navy:#134E4A;--saff:#10B981;--gold:#34D399;--bg:#F0FDFA;--card:#ffffff;--border:#99F6E4;--text:#0F2D2D;--muted:#0D9488;--success:#059669;--shadow:0 2px 12px rgba(19,78,74,.08)}
+body.theme-mint .sidebar{background:#134E4A}
+body.theme-mint .daily-banner{background:#134E4A}
+body.theme-mint .nsh{background:#134E4A}
+body.theme-mint .nkv td:first-child{background:#CCFBF1!important;color:#134E4A!important}
+body.theme-mint .mode-card.sel{background:#CCFBF1}
+body.theme-mint .hm-4{background:#134E4A}
+
+/* ── Saffron India (bonus) ── */
+body.theme-saffron{--navy:#9A3412;--saff:#F97316;--gold:#FCD34D;--bg:#FFF7ED;--card:#ffffff;--border:#FED7AA;--text:#7C2D12;--muted:#C2410C;--success:#15803D;--shadow:0 2px 12px rgba(154,52,18,.1)}
+body.theme-saffron .sidebar{background:#7C2D12}
+body.theme-saffron .daily-banner{background:#7C2D12}
+body.theme-saffron .nsh{background:#7C2D12}
+body.theme-saffron .nkv td:first-child{background:#FFEDD5!important;color:#9A3412!important}
+body.theme-saffron .hm-4{background:#9A3412}

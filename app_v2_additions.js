@@ -10,7 +10,6 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     if (typeof PAGE_META !== 'undefined') {
       PAGE_META.syllabus      = { title:'Full Syllabus',    sub:'Paper 1 · Paper 2 · Paper 3 — Complete MPPSC Coverage' };
-      PAGE_META.srsreview     = { title:'Smart Review',     sub:'Spaced repetition — questions you got wrong' };
       PAGE_META.bookmarkspage = { title:'Bookmarks',        sub:'Your saved questions' };
       PAGE_META.currentaffairs= { title:'Current Affairs',  sub:'Daily updates — National · MP · International' };
       PAGE_META.settings      = { title:'Settings',         sub:'Language, notifications, and more' };
@@ -18,7 +17,6 @@ window.addEventListener('DOMContentLoaded', () => {
     renderSyllabus();
     renderCurrentAffairs();
     renderBookmarks();
-    renderSRS();
     _updateBookmarkBadge();
   }, 600);
 });
@@ -408,3 +406,122 @@ window.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('setting-notifications');
   if (el) el.checked = localStorage.getItem('notifications_enabled') === '1';
 });
+
+// ══════════════════════════════════════════════
+//  THEME SYSTEM
+//  9 themes + admin universal override
+//  Reads admin_universal_theme from Firestore config
+// ══════════════════════════════════════════════
+
+const THEMES = [
+  { id:'default',  name:'Classic Blue',   emoji:'🔵', p:['#1A237E','#FF6B00','#F4F6FB','#fff'] },
+  { id:'dark',     name:'Dark Night',     emoji:'🌙', p:['#818CF8','#FB923C','#0F172A','#1E293B'] },
+  { id:'amoled',   name:'AMOLED Black',   emoji:'⚫', p:['#60A5FA','#F472B6','#000','#0D0D0D'] },
+  { id:'emerald',  name:'Emerald Forest', emoji:'🌿', p:['#065F46','#F59E0B','#ECFDF5','#fff'] },
+  { id:'ocean',    name:'Ocean Breeze',   emoji:'🌊', p:['#0C4A6E','#0EA5E9','#F0F9FF','#fff'] },
+  { id:'purple',   name:'Royal Purple',   emoji:'💜', p:['#5B21B6','#A855F7','#FAF5FF','#fff'] },
+  { id:'rose',     name:'Rose Petal',     emoji:'🌸', p:['#9F1239','#F97316','#FFF1F2','#fff'] },
+  { id:'sunset',   name:'Sunset Warm',    emoji:'🌅', p:['#B45309','#EF4444','#FFFBEB','#fff'] },
+  { id:'mint',     name:'Mint Fresh',     emoji:'🍃', p:['#134E4A','#10B981','#F0FDFA','#fff'] },
+  { id:'saffron',  name:'Saffron India',  emoji:'🇮🇳', p:['#9A3412','#F97316','#FFF7ED','#fff'] },
+];
+
+// Is there an admin-forced theme?
+let _adminLockedTheme = null;
+
+function _activeTheme() {
+  return _adminLockedTheme || localStorage.getItem('user_theme') || 'default';
+}
+
+function applyTheme(id) {
+  const body = document.body;
+  THEMES.forEach(t => body.classList.remove('theme-' + t.id));
+  if (id && id !== 'default') body.classList.add('theme-' + id);
+}
+
+function _renderThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  if (!grid) return;
+  const active = _activeTheme();
+  const locked = !!_adminLockedTheme;
+
+  grid.innerHTML = THEMES.map(t => {
+    const on = t.id === active;
+    return `<div onclick="${locked ? "showToast('Theme locked by admin','#7C3AED')" : `pickTheme('${t.id}')`}"
+      style="border:2.5px solid ${on ? 'var(--navy)' : 'var(--border)'};border-radius:14px;padding:12px;cursor:${locked ? 'not-allowed' : 'pointer'};background:${t.p[3]};transition:border .2s;position:relative;overflow:hidden">
+      ${on ? `<div style="position:absolute;top:6px;right:6px;background:var(--navy);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700">✓</div>` : ''}
+      ${locked && !on ? `<div style="position:absolute;top:6px;right:6px;font-size:11px">🔒</div>` : ''}
+      <div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">
+        <div style="width:20px;height:20px;border-radius:50%;background:${t.p[0]};flex-shrink:0"></div>
+        <div style="width:20px;height:20px;border-radius:50%;background:${t.p[1]};flex-shrink:0"></div>
+        <div style="width:20px;height:20px;border-radius:50%;background:${t.p[2]};border:1px solid #E2E8F0;flex-shrink:0"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:${t.p[0]};font-family:'Syne',sans-serif">${t.emoji} ${t.name}</div>
+    </div>`;
+  }).join('');
+
+  const label = document.getElementById('theme-active-label');
+  if (label) {
+    const th = THEMES.find(x => x.id === active) || THEMES[0];
+    label.textContent = (locked ? '🔒 ' : '') + th.name;
+  }
+}
+
+window.pickTheme = function(id) {
+  if (_adminLockedTheme) return;
+  localStorage.setItem('user_theme', id);
+  applyTheme(id);
+  _renderThemeGrid();
+  const t = THEMES.find(x => x.id === id);
+  if (typeof showToast === 'function') showToast((t ? t.emoji + ' ' : '') + (t ? t.name : id) + ' theme applied!', '#059669');
+};
+
+// Load admin universal theme from Firestore, then apply
+function _loadAndApplyTheme() {
+  try {
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      firebase.firestore().collection('config').doc('app_settings').get().then(snap => {
+        if (snap.exists && snap.data().universalTheme) {
+          _adminLockedTheme = snap.data().universalTheme;
+          applyTheme(_adminLockedTheme);
+        } else {
+          _adminLockedTheme = null;
+          applyTheme(localStorage.getItem('user_theme') || 'default');
+        }
+        _renderThemeGrid();
+      }).catch(() => {
+        applyTheme(localStorage.getItem('user_theme') || 'default');
+        _renderThemeGrid();
+      });
+    } else {
+      applyTheme(localStorage.getItem('user_theme') || 'default');
+      _renderThemeGrid();
+    }
+  } catch(e) {
+    applyTheme(localStorage.getItem('user_theme') || 'default');
+  }
+}
+
+// Apply stored theme immediately (before Firebase loads) to avoid flash
+(function() {
+  const stored = localStorage.getItem('user_theme');
+  if (stored && stored !== 'default') {
+    document.addEventListener('DOMContentLoaded', () => applyTheme(stored));
+  }
+})();
+
+// Full load after DOM ready
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(_loadAndApplyTheme, 700);
+});
+
+// Re-render grid when settings page opens
+(function patchShowPageForTheme() {
+  if (typeof showPage !== 'function') { setTimeout(patchShowPageForTheme, 300); return; }
+  const _orig = showPage;
+  window.showPage = function(id, ...rest) {
+    _orig.apply(this, [id, ...rest]);
+    if (id === 'settings') setTimeout(_renderThemeGrid, 60);
+  };
+  setTimeout(patchShowPageForTheme, 0); // patch once
+})();

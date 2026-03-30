@@ -45,7 +45,7 @@ function renderSyllabus() {
     return `
       <div style="margin-bottom:10px">
         <div onclick="ssSylTogglePaper(${pi})"
-          style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-left:4px solid ${paper.color};border-radius:12px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s">
+          style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-left:4px solid ${paper.color};border-radius:12px;padding:14px 18px;cursor:pointer;user-select:none">
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">${paper.icon}</span>
             <div>
