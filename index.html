@@ -68,7 +68,7 @@ input:checked+.slider:before{transform:translateX(20px)}
 <div class="nav-item" onclick="showPage('test')"><span class="ni">✏️</span>MCQ Test<span class="nav-badge">421</span></div>
 <div class="nav-item" onclick="showPage('daily')"><span class="ni">📅</span>Daily 10</div>
 <div class="nav-item" onclick="showPage('timed')"><span class="ni">⏱️</span>Timed Mock</div>
-<div class="nav-item" onclick="showPage('srsreview')"><span class="ni">🧠</span>Smart Review<span class="nav-badge new-badge" id="srs-count-badge" style="display:none">0</span></div>
+<div class="nav-item" onclick="showPage('srsreview')"><span class="ni">🧠</span>Smart Review<span class="nav-badge srs-badge" id="srs-count-badge" style="background:#7C3AED;display:none">0</span></div>
 
 <div class="nav-section">Resources</div>
 <div class="nav-item" onclick="showPage('pyq')"><span class="ni">📄</span>PYQ Papers<span class="nav-badge">4yr</span></div>
@@ -457,12 +457,12 @@ input:checked+.slider:before{transform:translateX(20px)}
 <!-- ═══ FULL SYLLABUS (NEW) ═══ -->
 <div class="page" id="page-syllabus">
 <div style="max-width:800px;margin:0 auto">
-<div class="page-hero" style="background:linear-gradient(135deg,#1A237E,#283593)">
+<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#1A237E,#283593);color:#fff;border:0">
 <div style="display:flex;align-items:center;gap:12px">
 <div style="font-size:32px">📋</div>
 <div>
 <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Complete MPPSC Syllabus</div>
-<div style="font-size:12px;opacity:.7;margin-top:2px">Paper 1 (GS) + Paper 2 (CSAT) + Paper 3 (MP GK)</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Paper 1 (GS) + Paper 2 (CSAT) + Paper 3 (MP GK) — Full Coverage</div>
 </div>
 </div>
 </div>
@@ -470,27 +470,20 @@ input:checked+.slider:before{transform:translateX(20px)}
 </div>
 </div>
 
-<!-- ═══ SMART REVIEW / SRS (NEW) ═══ -->
+<!-- ═══ SMART REVIEW / SRS ═══ -->
 <div class="page" id="page-srsreview">
 <div style="max-width:700px;margin:0 auto">
-<div class="page-hero" style="background:linear-gradient(135deg,#4A148C,#7B1FA2)">
+<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#4A148C,#7B1FA2);color:#fff;border:0">
 <div style="display:flex;align-items:center;gap:12px">
 <div style="font-size:32px">🧠</div>
 <div>
-<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Smart Review (SRS)</div>
-<div style="font-size:12px;opacity:.7;margin-top:2px">Wrong questions come back at 1→3→7→14→30 day intervals</div>
+<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">Spaced Repetition Review</div>
+<div style="font-size:12px;opacity:.7;margin-top:2px">Questions you got wrong come back at optimal intervals (1→3→7→14→30 days)</div>
 </div>
 </div>
 </div>
 <div class="grid-4" id="srs-stats-grid" style="margin-bottom:16px"></div>
-<div id="srs-review-area">
-<div class="card" style="text-align:center;padding:32px">
-<div style="font-size:40px;margin-bottom:12px">🧠</div>
-<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">No reviews due today</div>
-<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Complete MCQ tests and get questions wrong — they'll appear here for spaced repetition review.</div>
-<button class="btn-primary" style="width:auto;padding:10px 24px" onclick="showPage('test')">Go Practice →</button>
-</div>
-</div>
+<div id="srs-review-area"></div>
 </div>
 </div>
 
@@ -623,6 +616,8 @@ No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="app_v2_additions.js"></script>
+<script src="data_syllabus.js"></script>
+<script src="smart_study.js"></script>
 <script src="auth.js"></script>
 <script src="updater.js"></script>
 <script>
