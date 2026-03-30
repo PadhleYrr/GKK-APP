@@ -523,5 +523,5 @@ window.addEventListener('DOMContentLoaded', () => {
     _orig.apply(this, [id, ...rest]);
     if (id === 'settings') setTimeout(_renderThemeGrid, 60);
   };
-  setTimeout(patchShowPageForTheme, 0); // patch once
+  // NOTE: do NOT recurse here — patch runs exactly once
 })();

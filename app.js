@@ -142,6 +142,9 @@ function showPage(id, skipTestReset) {
   if (id === 'review') renderReviewPage();
   if (id === 'test' && !skipTestReset) resetTestHome();
   if (id === 'daily') renderDailyPage();
+  if (id === 'currentaffairs') { if (typeof renderCurrentAffairs === 'function') renderCurrentAffairs(); }
+  if (id === 'bookmarkspage')  { if (typeof renderBookmarks      === 'function') renderBookmarks(); }
+  if (id === 'syllabus')       { if (typeof renderSyllabus       === 'function') renderSyllabus(); }
   closeSidebarMobile();
 }
 // Navigate to test page WITHOUT resetting — used when launching a test directly

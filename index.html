@@ -585,7 +585,79 @@ No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
 <script src="pyq_2021_paper2.js"></script>
 <script src="data_pyq.js"></script>
 <script src="data_notes.js"></script>
-<script src="i18n.js"></script>
+<script>
+// ═══════════════════════════════════════════
+//  i18n — UI language toggle (inline, no separate file needed)
+// ═══════════════════════════════════════════
+const i18n = (() => {
+  const KEY = 'ui_lang';
+  function getLang() { return localStorage.getItem(KEY) || 'en'; }
+  function apply(lang) {
+    document.body && document.body.classList.toggle('lang-hi', lang === 'hi');
+    const label = document.getElementById('lang-label');
+    const badge = document.getElementById('lang-badge');
+    if (label) label.textContent = lang === 'hi' ? 'Switch to English' : 'Switch to Hindi / हिंदी';
+    if (badge) badge.textContent = lang === 'hi' ? 'HI' : 'EN';
+    const btn = document.getElementById('lang-toggle-btn');
+    if (btn) btn.textContent = lang === 'hi' ? 'EN / हिं  ✓ HI' : 'EN / हिं';
+  }
+  function toggle() {
+    const next = getLang() === 'en' ? 'hi' : 'en';
+    localStorage.setItem(KEY, next);
+    apply(next);
+    if (typeof showToast === 'function')
+      showToast(next === 'hi' ? '🇮🇳 Hindi UI enabled' : '🇬🇧 English UI enabled', '#1A237E');
+  }
+  window.addEventListener('DOMContentLoaded', () => apply(getLang()));
+  return { toggle, getLang, apply };
+})();
+
+// ═══════════════════════════════════════════
+//  setQLang — Question language switcher
+//  (no Hindi questions yet — shows friendly notice)
+// ═══════════════════════════════════════════
+function setQLang(lang) {
+  localStorage.setItem('q_lang', lang);
+
+  // Update button styles — test page buttons
+  const enBtn  = document.getElementById('qlang-en');
+  const hiBtn  = document.getElementById('qlang-hi');
+  const status = document.getElementById('qlang-hi-status');
+  // Settings page buttons
+  const setEn  = document.getElementById('set-qlang-en');
+  const setHi  = document.getElementById('set-qlang-hi');
+
+  const activeStyle   = 'background:#1A237E;color:#fff;border:none';
+  const inactiveStyle = 'background:#F1F5F9;color:#64748B;border:1.5px solid #E2E8F0';
+
+  if (enBtn)  enBtn.style.cssText  = (lang === 'en' ? activeStyle : inactiveStyle) + ';flex:1;padding:9px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer';
+  if (hiBtn)  hiBtn.style.cssText  = (lang === 'hi' ? activeStyle : inactiveStyle) + ';flex:1;padding:9px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer';
+  if (setEn)  setEn.style.cssText  = (lang === 'en' ? activeStyle : inactiveStyle) + ';padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+  if (setHi)  setHi.style.cssText  = (lang === 'hi' ? activeStyle : inactiveStyle) + ';padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+
+  // Hindi availability check
+  const hasHindi = typeof Q_HI !== 'undefined' && Q_HI && Q_HI.length > 0;
+  if (status) {
+    if (lang === 'hi') {
+      status.textContent = hasHindi
+        ? '✅ Hindi questions loaded (' + Q_HI.length + ' questions)'
+        : '⚠️ Hindi questions not available yet — showing English';
+      status.style.color = hasHindi ? '#059669' : '#D97706';
+    } else {
+      status.textContent = 'Hindi files: ' + (hasHindi ? 'available' : 'not loaded');
+      status.style.color = 'var(--muted)';
+    }
+  }
+
+  if (typeof showToast === 'function')
+    showToast(lang === 'hi' ? '🇮🇳 Question language: Hindi' : '🇬🇧 Question language: English', '#1A237E');
+}
+
+// Apply saved q_lang button states on load
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => setQLang(localStorage.getItem('q_lang') || 'en'), 500);
+});
+</script>
 <script src="app.js"></script>
 <script src="app_v2_additions.js"></script>
 <script src="data_syllabus.js"></script>
