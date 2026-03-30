@@ -45,15 +45,15 @@ function renderSyllabus() {
     return `
       <div style="margin-bottom:10px">
         <div onclick="ssSylTogglePaper(${pi})"
-          style="display:flex;align-items:center;justify-content:space-between;background:${paper.color};color:#fff;border-radius:12px;padding:14px 18px;cursor:pointer;user-select:none">
+          style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-left:4px solid ${paper.color};border-radius:12px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s">
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">${paper.icon}</span>
             <div>
-              <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800">${paper.paper}</div>
-              <div style="font-size:11px;opacity:.7;margin-top:1px">${paper.subjects.length} subjects · ${paper.subjects.reduce((s,sub)=>s+sub.topics.length,0)} topics</div>
+              <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text)">${paper.paper}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:1px">${paper.subjects.length} subjects · ${paper.subjects.reduce((s,sub)=>s+sub.topics.length,0)} topics</div>
             </div>
           </div>
-          <span id="syl-parrow-${pi}" style="font-size:14px;opacity:.8;transition:transform .2s">▼</span>
+          <span id="syl-parrow-${pi}" style="font-size:14px;color:var(--muted);transition:transform .2s">▼</span>
         </div>
         <div id="syl-paper-${pi}" style="padding:8px 0 2px">
           ${subjects}
