@@ -469,20 +469,6 @@ input:checked+.slider:before{transform:translateX(20px)}
 </div>
 </div>
 
-
-</div>
-<div class="grid-4" id="srs-stats-grid" style="margin-bottom:16px"></div>
-<div id="srs-review-area">
-<div class="card" style="text-align:center;padding:32px">
-<div style="font-size:40px;margin-bottom:12px">🧠</div>
-<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">No reviews due today</div>
-<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Complete MCQ tests and get questions wrong — they'll appear here for spaced repetition review.</div>
-<button class="btn-primary" style="width:auto;padding:10px 24px" onclick="showPage('test')">Go Practice →</button>
-</div>
-</div>
-</div>
-</div>
-
 <!-- ═══ BOOKMARKS (NEW) ═══ -->
 <div class="page" id="page-bookmarkspage">
 <div style="max-width:700px;margin:0 auto">
@@ -575,62 +561,6 @@ No bookmarks yet.<br>Tap 🔖 while answering any question to save it here.
 </div>
 </div>
 
-<div class="setting-row">
-<div>
-<div class="setting-label">🌐 UI Language / भाषा</div>
-<div class="setting-desc">Switch app interface between English and Hindi</div>
-</div>
-<button onclick="i18n.toggle()" style="padding:8px 16px;background:#1A237E;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" id="lang-toggle-btn">EN / हिं</button>
-</div>
-
-<div class="setting-row">
-<div>
-<div class="setting-label">🇮🇳 Question Language</div>
-<div class="setting-desc">Show MCQs in Hindi (requires Hindi question files)</div>
-</div>
-<div style="display:flex;gap:6px">
-<button onclick="setQLang('en')" id="set-qlang-en" style="padding:7px 12px;background:#1A237E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">EN</button>
-<button onclick="setQLang('hi')" id="set-qlang-hi" style="padding:7px 12px;background:#F1F5F9;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">हिं</button>
-</div>
-</div>
-
-<div class="setting-row">
-<div><div class="setting-label">🔔 Daily Reminders</div><div class="setting-desc">Get notification to study daily</div></div>
-<label class="switch"><input type="checkbox" id="setting-notifications" onchange="toggleNotifications(this.checked)"><span class="slider"></span></label>
-</div>
-
-<div class="setting-row">
-<div><div class="setting-label">🌙 Dark Mode</div><div class="setting-desc">Coming soon in v2.1</div></div>
-<label class="switch"><input type="checkbox" disabled><span class="slider" style="opacity:.4"></span></label>
-</div>
-
-<div class="setting-row">
-<div><div class="setting-label">🎟 Redeem Coupon</div><div class="setting-desc">Have a coupon code? Apply it here</div></div>
-<button onclick="redeemCoupon()" style="padding:8px 14px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Apply</button>
-</div>
-
-<div class="setting-row">
-<div><div class="setting-label">📱 App Version</div><div class="setting-desc" id="setting-version-text">v1.0.2 — MPPSC 2026 Edition</div></div>
-</div>
-
-<div class="setting-row">
-<div><div class="setting-label">🗑️ Reset All Progress</div><div class="setting-desc">Clear all data — cannot be undone</div></div>
-<button onclick="if(confirm('Reset ALL progress? This cannot be undone!')){localStorage.clear();location.reload();}" style="padding:8px 14px;background:#DC2626;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">Reset</button>
-</div>
-</div>
-
-<div class="card">
-<div class="sec-hd"><div class="sec-title">📖 How to Add Hindi Questions</div></div>
-<div style="font-size:13px;color:var(--muted);line-height:1.9">
-1. Translate a PYQ file (e.g. pyq_2021_paper1.js) to Hindi<br>
-2. Save as <code style="background:#F1F5F9;padding:1px 5px;border-radius:4px">pyq_2021_paper1_hi.js</code><br>
-3. Add <code style="background:#F1F5F9;padding:1px 5px;border-radius:4px">&lt;script src="pyq_2021_paper1_hi.js"&gt;</code> to index.html<br>
-4. Switch Question Language to हिं above<br><br>
-<span style="color:#7C3AED;font-weight:600">Tip:</span> Use Claude to translate one file per session — upload the .js file and ask for Hindi translation in same format.
-</div>
-</div>
-</div>
-</div>
 
 </main>
 
